@@ -24,42 +24,37 @@
 
         window._auth = auth; window._db = db;
         window._firebaseFns = { signInWithEmailAndPassword, createUserWithEmailAndPassword, doc, getDoc, setDoc, serverTimestamp };
-        window._firebaseReady = true;
-        document.dispatchEvent(new Event('firebaseReady'));
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script>emailjs.init("1OMejyyUkbzLcwj7t");</script>
 
     <style>
         body {
             margin: 0;
             font-family: 'Segoe UI', sans-serif;
             background: #1b4f72;
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
             color: white;
         }
 
         .login-box {
             background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(20px);
-            padding: 40px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.2);
             border-radius: 24px;
+            padding: 40px;
             width: 100%;
             max-width: 400px;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .tab-switcher {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
             background: rgba(0,0,0,0.2);
-            padding: 5px;
             border-radius: 50px;
+            padding: 5px;
+            margin-bottom: 20px;
         }
 
         .tab-btn {
@@ -84,7 +79,7 @@
         input {
             width: 100%;
             padding: 12px;
-            border-radius: 8px;
+            border-radius: 10px;
             border: none;
             background: rgba(255,255,255,0.2);
             color: white;
@@ -100,31 +95,12 @@
             color: white;
             font-weight: bold;
             cursor: pointer;
-            margin-top: 10px;
-        }
-
-        .msg {
-            margin-top: 15px;
-            font-size: 14px;
-            display: none;
-            padding: 10px;
-            border-radius: 8px;
-        }
-
-        .error {
-            background: rgba(231, 76, 60, 0.3);
-            color: #ff9999;
-        }
-
-        .success {
-            background: rgba(46, 204, 113, 0.3);
-            color: #99ff99;
         }
     </style>
 </head>
 <body>
     <div class="login-box">
-        <h1>SpickerSeite</h1>
+        <h1>🎓 SpickerSeite</h1>
         <div class="tab-switcher">
             <button class="tab-btn active" id="t-login" onclick="switchTab('login')">Login</button>
             <button class="tab-btn" id="t-reg" onclick="switchTab('reg')">Registrieren</button>
@@ -137,12 +113,11 @@
         </div>
 
         <div id="f-reg" style="display:none">
-            <div class="input-group"><input type="text" id="r-name" placeholder="Vollständiger Name"></div>
+            <div class="input-group"><input type="text" id="r-name" placeholder="Name"></div>
             <div class="input-group"><input type="email" id="r-email" placeholder="E-Mail"></div>
-            <div class="input-group"><input type="password" id="r-pass" placeholder="Passwort (min. 6 Zeichen)"></div>
-            <button class="btn" onclick="doRegister()">Registrieren</button>
+            <div class="input-group"><input type="password" id="r-pass" placeholder="Passwort"></div>
+            <button class="btn" onclick="doRegister()">Registrierung anfragen</button>
         </div>
-        <div class="msg" id="msg"></div>
     </div>
 
     <script>
@@ -161,15 +136,10 @@
                 const userCred = await window._firebaseFns.signInWithEmailAndPassword(window._auth, email, pass);
                 const snap = await window._firebaseFns.getDoc(window._firebaseFns.doc(window._db, "users", userCred.user.uid));
                 const data = snap.data();
-
-                if (email.toLowerCase() === SUPERADMIN) {
-                    window.location.href = 'admin.html';
-                } else if (data.isApproved) {
-                    window.location.href = 'start.html';
-                } else {
-                    alert("Dein Account wartet noch auf Freischaltung durch Julian.");
-                }
-            } catch (e) { alert("Fehler: " + e.message); }
+                if (email.toLowerCase() === SUPERADMIN) { window.location.href = 'admin.html'; }
+                else if (data.isApproved) { window.location.href = 'start.html'; }
+                else { alert("Julian muss dich erst freischalten!"); }
+            } catch (e) { alert("Fehler beim Login."); }
         }
 
         async function doRegister() {
@@ -179,13 +149,10 @@
             try {
                 const userCred = await window._firebaseFns.createUserWithEmailAndPassword(window._auth, email, pass);
                 await window._firebaseFns.setDoc(window._firebaseFns.doc(window._db, "users", userCred.user.uid), {
-                    name, email, isApproved: false, isAdmin: false, createdAt: window._firebaseFns.serverTimestamp(), permissions: {}
+                    name, email, isApproved: false, isAdmin: false, createdAt: window._firebaseFns.serverTimestamp()
                 });
-                // Benachrichtigung an Julian
-                emailjs.send("service_7twg9kk", "template_yh83gp9", { to_email: "julianknuhr92@gmail.com", user_name: name, user_email: email });
-                document.getElementById('msg').textContent = "Erfolgreich! Julian prüft deine Anfrage.";
-                document.getElementById('msg').className = "msg success";
-                document.getElementById('msg').style.display = "block";
+                alert("Anfrage gesendet! Julian sieht dich jetzt in seinem Dashboard.");
+                switchTab('login');
             } catch (e) { alert("Fehler: " + e.message); }
         }
     </script>
