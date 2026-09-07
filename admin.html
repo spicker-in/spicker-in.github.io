@@ -2,147 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin-Panel – SpickerSeite</title>
-
-    <!-- EmailJS SDK mit deinem Public Key -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script>
-        emailjs.init("1OMejyyUkbzLcwj7t");
-    </script>
-
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-            background: #1b4f72;
-            color: white;
-            min-height: 100vh;
-        }
-        .navbar {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .nav-links a {
-            color: white; text-decoration: none; margin-left: 20px;
-            font-weight: bold; cursor: pointer;
-        }
-        .admin-btn { color: #ffeb3b !important; }
-        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
-        .admin-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 30px; padding: 35px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-        h1 { margin-top: 0; font-size: 28px; }
-        h2 {
-            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-            padding-bottom: 10px; margin-top: 35px; font-size: 20px;
-        }
-        .table-responsive { overflow-x: auto; margin-top: 15px; }
-        table {
-            width: 100%; border-collapse: collapse;
-            background: rgba(0, 0, 0, 0.25); border-radius: 12px; overflow: hidden;
-        }
-        th, td {
-            text-align: left; padding: 14px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px;
-        }
-        th { background: rgba(255, 255, 255, 0.15); font-weight: 600; }
-        .pending-row { background: rgba(243, 156, 18, 0.22); }
-        .badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
-        .badge-active { background: #2ecc71; color: white; }
-        .badge-pending { background: #e67e22; color: white; }
-        .badge-admin { background: #f1c40f; color: #1b4f72; }
-        .badge-user { background: #7f8c8d; color: white; }
-        .btn-action {
-            padding: 8px 12px; border-radius: 6px; border: none;
-            cursor: pointer; font-weight: bold; font-size: 12px;
-            margin-right: 5px; margin-bottom: 3px; color: white;
-            transition: opacity 0.2s;
-        }
-        .btn-approve { background: #2ecc71; }
-        .btn-block { background: #e67e22; }
-        .btn-make-admin { background: #f1c40f; color: #1b4f72 !important; }
-        .btn-remove-admin { background: #95a5a6; }
-        .btn-delete { background: #e74c3c; }
-        .btn-action:hover { opacity: 0.85; }
-        .loading-row { text-align: center; padding: 30px; opacity: 0.8; }
-    </style>
-</head>
-<body>
-
-    <nav class="navbar">
-        <div style="font-size: 20px; font-weight: bold;">🎓 Fachschaft Informatik</div>
-        <div class="nav-links">
-            <span id="user-name">Lade...</span>
-            <a href="start.html" style="color: #5dade2;">🏠 Startseite</a>
-            <a href="admin.html" class="admin-btn">🛠 Admin</a>
-            <a onclick="logout()" style="cursor: pointer;">Abmelden</a>
-        </div>
-    </nav>
-
-    <div class="container">
-        <div class="admin-card">
-            <h1>🛠 Admin Dashboard</h1>
-            
-            <!-- PASSWORT RESET -->
-            <div>
-                <h2>🔑 Offene Passwort-Reset Anfragen</h2>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>E-Mail</th>
-                                <th>Datum der Anfrage</th>
-                                <th>Aktion</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reset-requests-body">
-                            <tr><td colspan="3" class="loading-row">Lade Anfragen...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- NUTZERVERWALTUNG -->
-            <div>
-                <h2>👥 Nutzerverwaltung & Freischaltungen</h2>
-                <div class="table-responsive">
-                    <table id="user-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>E-Mail</th>
-                                <th>Status</th>
-                                <th>Rolle</th>
-                                <th>Aktionen</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user-list-body">
-                            <tr><td colspan="5" class="loading-row">Lade registrierte Nutzer...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <title>Admin – SpickerSeite</title>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { 
-            getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -157,196 +21,90 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const SUPERADMIN_EMAIL = 'julianknuhr92@gmail.com';
-        const EMAILJS_SERVICE_ID = 'service_7twg9kk';
-        const EMAILJS_TEMPLATE_WELCOME = 'template_fygcnxh';
+        window._db = db;
+        window._auth = auth;
+        window._fns = { collection, onSnapshot, doc, updateDoc, deleteDoc };
+        document.dispatchEvent(new Event('fbReady'));
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script>emailjs.init("1OMejyyUkbzLcwj7t");</script>
 
-        window.logout = async () => {
-            await signOut(auth);
-            window.location.href = 'login.html';
-        };
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        .btn { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; color: white; margin-right: 5px; }
+        .btn-ok { background: #2ecc71; }
+        .btn-del { background: #e74c3c; }
+        .btn-perm { background: #9b59b6; }
+        .perm-panel { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; display: none; margin-top: 10px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠 Admin Dashboard</h1>
+        <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Aktionen</th></tr></thead>
+            <tbody id="user-list"></tbody>
+        </table>
+    </div>
 
-        // AUTH CHECK
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            const isSuperAdmin = (user.email && user.email.toLowerCase() === SUPERADMIN_EMAIL);
-            try {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    if (!data.isAdmin && !isSuperAdmin) {
-                        alert("Zugriff verweigert: Keine Administrator-Rechte.");
-                        window.location.href = 'start.html';
-                        return;
-                    }
-                    document.getElementById('user-name').textContent = (data.name || user.email) + " (Admin)";
-                } else if (isSuperAdmin) {
-                    document.getElementById('user-name').textContent = "Julian (Haupt-Admin)";
-                } else {
-                    window.location.href = 'login.html';
-                    return;
-                }
-
-                startUserListener();
-                startPasswordRequestsListener();
-            } catch (err) {
-                console.error("Auth Fehler:", err);
-                if (isSuperAdmin) {
-                    document.getElementById('user-name').textContent = "Julian (Haupt-Admin)";
-                    startUserListener();
-                    startPasswordRequestsListener();
-                }
-            }
+    <script>
+        const SUPERADMIN = 'julianknuhr92@gmail.com';
+        document.addEventListener('fbReady', () => {
+            window._auth.onAuthStateChanged(user => {
+                if (!user || user.email !== SUPERADMIN) window.location.href = 'login.html';
+                loadUsers();
+            });
         });
 
-        // 1. LIVE USER LISTE
-        function startUserListener() {
-            onSnapshot(collection(db, "users"), (snapshot) => {
-                const tbody = document.getElementById('user-list-body');
-                tbody.innerHTML = '';
-
-                if (snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Keine Nutzer registriert.</td></tr>';
-                    return;
-                }
-
-                snapshot.forEach((docSnap) => {
-                    const u = docSnap.data();
-                    const uid = docSnap.id;
-                    const isSuperadmin = (u.email && u.email.toLowerCase() === SUPERADMIN_EMAIL);
-
+        function loadUsers() {
+            window._fns.onSnapshot(window._fns.collection(window._db, "users"), (snap) => {
+                const list = document.getElementById('user-list');
+                list.innerHTML = '';
+                snap.forEach(d => {
+                    const u = d.data();
+                    if (u.email === SUPERADMIN) return;
                     const tr = document.createElement('tr');
-                    if (!u.isApproved && !isSuperadmin) tr.className = 'pending-row';
-
-                    const statusBadge = (u.isApproved || isSuperadmin)
-                        ? '<span class="badge badge-active">✅ Freigeschaltet</span>' 
-                        : '<span class="badge badge-pending">⏳ Wartet auf Freigabe</span>';
-
-                    const roleBadge = (u.isAdmin || isSuperadmin)
-                        ? '<span class="badge badge-admin">👑 Admin</span>' 
-                        : '<span class="badge badge-user">Student</span>';
-
-                    let toggleApproveBtn = '';
-                    if (!isSuperadmin) {
-                        toggleApproveBtn = u.isApproved 
-                            ? `<button class="btn-action btn-block" onclick="toggleApproval('${uid}', false, '${u.email}', '${u.name}')">Sperren</button>`
-                            : `<button class="btn-action btn-approve" onclick="toggleApproval('${uid}', true, '${u.email}', '${u.name}')">✅ Freischalten</button>`;
-                    }
-
-                    let toggleAdminBtn = '';
-                    if (!isSuperadmin) {
-                        toggleAdminBtn = u.isAdmin 
-                            ? `<button class="btn-action btn-remove-admin" onclick="toggleAdminRole('${uid}', false)">Admin entziehen</button>`
-                            : `<button class="btn-action btn-make-admin" onclick="toggleAdminRole('${uid}', true)">👑 Zum Admin machen</button>`;
-                    }
-
-                    const deleteBtn = !isSuperadmin 
-                        ? `<button class="btn-action btn-delete" onclick="deleteUser('${uid}', '${u.name || u.email}')">Löschen</button>`
-                        : '';
-
                     tr.innerHTML = `
-                        <td><strong>${escapeHtml(u.name || '–')}</strong></td>
-                        <td>${escapeHtml(u.email || '–')}</td>
-                        <td>${statusBadge}</td>
-                        <td>${roleBadge}</td>
-                        <td>${toggleApproveBtn} ${toggleAdminBtn} ${deleteBtn}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            });
-        }
-
-        // 2. LIVE PASSWORT ANFRAGEN
-        function startPasswordRequestsListener() {
-            onSnapshot(collection(db, "passwordRequests"), (snapshot) => {
-                const tbody = document.getElementById('reset-requests-body');
-                tbody.innerHTML = '';
-
-                if (snapshot.empty) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; opacity:0.7;">Keine offenen Passwort-Anfragen.</td></tr>';
-                    return;
-                }
-
-                snapshot.forEach((docSnap) => {
-                    const req = docSnap.data();
-                    const reqId = docSnap.id;
-                    const dateStr = req.requestedAt?.toDate ? req.requestedAt.toDate().toLocaleString('de-DE') : '–';
-
-                    const tr = document.createElement('tr');
-                    tr.style.background = 'rgba(231, 76, 60, 0.15)';
-                    tr.innerHTML = `
-                        <td><strong>${escapeHtml(req.email)}</strong></td>
-                        <td>${dateStr}</td>
+                        <td>${u.name}</td>
+                        <td>${u.email}</td>
+                        <td>${u.isApproved ? '✅ Aktiv' : '⏳ Wartet'}</td>
                         <td>
-                            <button class="btn-action btn-approve" onclick="resolvePasswordReset('${reqId}', '${req.email}')">
-                                ✅ Erledigt / Löschen
-                            </button>
+                            <button class="btn btn-ok" onclick="approve('${d.id}', '${u.email}', '${u.name}')">Freigeben</button>
+                            <button class="btn btn-perm" onclick="togglePerms('${d.id}')">Berechtigungen</button>
+                            <button class="btn btn-del" onclick="deleteU('${d.id}')">Löschen</button>
+                            <div id="perms-${d.id}" class="perm-panel">
+                                <strong>Seiten-Zugriff:</strong><br>
+                                <input type="checkbox" ${u.permissions?.altklausuren ? 'checked' : ''} onchange="updatePerm('${d.id}', 'altklausuren', this.checked)"> Altklausuren<br>
+                                <input type="checkbox" ${u.permissions?.skripte ? 'checked' : ''} onchange="updatePerm('${d.id}', 'skripte', this.checked)"> Skripte
+                            </div>
                         </td>
                     `;
-                    tbody.appendChild(tr);
+                    list.appendChild(tr);
                 });
             });
         }
 
-        // AKTIONEN
-        window.toggleApproval = async (uid, newStatus, userEmail, userName) => {
-            try {
-                await updateDoc(doc(db, "users", uid), { isApproved: newStatus });
-
-                // E-Mail senden, wenn der Admin auf "Freischalten" klickt
-                if (newStatus === true && userEmail) {
-                    try {
-                        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_WELCOME, {
-                            to_email: userEmail,
-                            to_name: userName || 'Student',
-                            login_link: window.location.origin + '/login.html'
-                        });
-                        alert(`✅ ${userName} wurde freigeschaltet und hat eine Willkommens-E-Mail erhalten!`);
-                    } catch (mailErr) {
-                        console.warn("E-Mail Fehler:", mailErr);
-                        alert(`✅ ${userName} freigeschaltet (E-Mail konnte nicht gesendet werden).`);
-                    }
-                }
-            } catch (err) {
-                alert("Fehler: " + err.message);
-            }
-        };
-
-        window.toggleAdminRole = async (uid, makeAdmin) => {
-            if (!confirm(makeAdmin ? "Zum Admin machen?" : "Admin-Rechte entziehen?")) return;
-            try {
-                await updateDoc(doc(db, "users", uid), { isAdmin: makeAdmin });
-            } catch (err) {
-                alert("Fehler: " + err.message);
-            }
-        };
-
-        window.deleteUser = async (uid, userName) => {
-            if (!confirm(`Nutzer "${userName}" wirklich löschen?`)) return;
-            try {
-                await deleteDoc(doc(db, "users", uid));
-            } catch (err) {
-                alert("Fehler beim Löschen: " + err.message);
-            }
-        };
-
-        window.resolvePasswordReset = async (reqId, email) => {
-            if (!confirm(`Anfrage für ${email} erledigt und entfernen?`)) return;
-            try {
-                await deleteDoc(doc(db, "passwordRequests", reqId));
-            } catch (err) {
-                alert("Fehler: " + err.message);
-            }
-        };
-
-        function escapeHtml(text) {
-            const map = { '&': '&', '<': '<', '>': '>', '"': '"', "'": ''' };
-            return String(text).replace(/[&<>"']/g, m => map[m]);
+        async function approve(id, email, name) {
+            await window._fns.updateDoc(window._fns.doc(window._db, "users", id), { isApproved: true });
+            emailjs.send("service_7twg9kk", "template_fygcnxh", { to_email: email, to_name: name });
+            alert("Nutzer freigeschaltet!");
         }
+
+        function togglePerms(id) {
+            const p = document.getElementById('perms-' + id);
+            p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function updatePerm(id, key, val) {
+            const ref = window._fns.doc(window._db, "users", id);
+            const update = {}; update[`permissions.${key}`] = val;
+            await window._fns.updateDoc(ref, update);
+        }
+
+        async function deleteU(id) { if(confirm("Löschen?")) await window._fns.deleteDoc(window._fns.doc(window._db, "users", id)); }
     </script>
 </body>
 </html>
