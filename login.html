@@ -295,7 +295,56 @@
             }
         }
 
-        // PASSWORT VERGESSEN FUNKTION
+
+
+
+
+
+
+
+
+
+        async function doForgotPassword() {
+            const email = document.getElementById('l-email').value.trim();
+            const statusEl = document.getElementById('status-msg');
+
+            if (!email) {
+                alert("Bitte gib zuerst deine E-Mail Adresse in das Feld ein.");
+                document.getElementById('l-email').focus();
+                return;
+            }
+
+            try {
+                const f = window._firebaseFns;
+
+                // Direkter Mailversand ohne vorherigen Datenbank-Check
+                await f.sendPasswordResetEmail(window._auth, email);
+
+                if (statusEl) {
+                    statusEl.textContent = `Eine Email zum Zurücksetzen wurde an ${email} versendet.`;
+                    statusEl.style.display = 'block';
+                }
+            } catch (e) {
+                console.error("Firebase Fehler:", e);
+                alert("Fehler beim Senden: " + e.message);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       /* // PASSWORT VERGESSEN FUNKTION
         async function doForgotPassword() {
             const email = document.getElementById('l-email').value.trim();
             const statusEl = document.getElementById('status-msg');
@@ -330,7 +379,7 @@
             } catch (e) {
                 alert("Fehler: " + e.message);
             }
-        }
+        }*/
     </script>
 </body>
 </html>
