@@ -276,19 +276,25 @@
 
         async function doForgotPassword() {
             const email = document.getElementById('l-email').value.trim();
+            const statusEl = document.getElementById('status-msg'); // Das Element holen
+
             if (!email) {
-                alert("Bitte gib zuerst deine E-Mail Adresse in das Feld ein.");
-                document.getElementById('l-email').focus();
+                alert("Bitte gib zuerst deine E-Mail Adresse ein.");
                 return;
             }
 
-            if (confirm("Soll eine E-Mail zum Zurücksetzen des Passworts an " + email + " gesendet werden?")) {
-                try {
-                    await window._firebaseFns.sendPasswordResetEmail(window._auth, email);
-                    alert("E-Mail wurde versendet! Bitte prüfe auch deinen Spam-Ordner.");
-                } catch (e) {
-                    alert("Fehler: " + e.message);
-                }
+            try {
+                await window._firebaseFns.sendPasswordResetEmail(window._auth, email);
+
+                // Nachricht ins Dokument schreiben und anzeigen
+                statusEl.textContent = `Eine Email zum Zurücksetzen des Passworts wurde an ${email} versendet.`;
+                statusEl.style.display = 'block';
+
+                // Nach 5 Sekunden wieder ausblenden
+                setTimeout(() => { statusEl.style.display = 'none'; }, 2500);
+
+            } catch (e) {
+                alert("Fehler: " + e.message);
             }
         }
     </script>
