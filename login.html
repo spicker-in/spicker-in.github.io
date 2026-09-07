@@ -303,7 +303,6 @@
 
 
 
-
         async function doForgotPassword() {
             const email = document.getElementById('l-email').value.trim();
             const statusEl = document.getElementById('status-msg');
@@ -317,16 +316,24 @@
             try {
                 const f = window._firebaseFns;
 
-                // Direkter Mailversand ohne vorherigen Datenbank-Check
+                // Firebase Auth prüft die E-Mail und verschickt den Reset-Link
                 await f.sendPasswordResetEmail(window._auth, email);
 
                 if (statusEl) {
-                    statusEl.textContent = `Eine Email zum Zurücksetzen wurde an ${email} versendet.`;
+                    statusEl.textContent = `Eine E-Mail zum Zurücksetzen wurde an ${email} versendet.`;
                     statusEl.style.display = 'block';
+                    setTimeout(() => { statusEl.style.display = 'none'; }, 10000);
                 }
             } catch (e) {
                 console.error("Firebase Fehler:", e);
-                alert("Fehler beim Senden: " + e.message);
+                // Gibt dem Nutzer eine verständliche Fehlermeldung
+                if (e.code === 'auth/user-not-found') {
+                    alert("Zu dieser E-Mail-Adresse existiert kein Benutzerkonto.");
+                } else if (e.code === 'auth/invalid-email') {
+                    alert("Bitte gib eine gültige E-Mail-Adresse ein.");
+                } else {
+                    alert("Fehler beim Senden: " + e.message);
+                }
             }
         }
 
