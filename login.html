@@ -4,13 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login – SpickerSeite</title>
+
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import {
             getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
             sendPasswordResetEmail, setPersistence, browserLocalPersistence, browserSessionPersistence
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import {
+            getFirestore, doc, getDoc, setDoc, serverTimestamp,
+            query, where, collection, getDocs
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -25,12 +30,13 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Funktionen global verfügbar machen
         window._auth = auth;
         window._db = db;
         window._firebaseFns = {
             signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail,
             setPersistence, browserLocalPersistence, browserSessionPersistence,
-            doc, getDoc, setDoc, serverTimestamp
+            doc, getDoc, setDoc, serverTimestamp, query, where, collection, getDocs
         };
     </script>
 
@@ -55,7 +61,13 @@
             width: 100%;
             max-width: 400px;
             text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 28px;
+            letter-spacing: 1px;
         }
 
         .tab-switcher {
@@ -75,6 +87,7 @@
             color: white;
             cursor: pointer;
             font-weight: bold;
+            transition: 0.3s;
         }
 
             .tab-btn.active {
@@ -94,7 +107,12 @@
             color: white;
             outline: none;
             box-sizing: border-box;
+            font-size: 16px;
         }
+
+            input::placeholder {
+                color: rgba(255,255,255,0.6);
+            }
 
         .btn {
             width: 100%;
@@ -106,9 +124,15 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 10px;
+            font-size: 16px;
+            transition: 0.3s;
         }
 
-        /* Das Design für die Status-Nachricht */
+            .btn:hover {
+                background: #3498db;
+                transform: translateY(-2px);
+            }
+
         .status-msg {
             display: none;
             margin-bottom: 15px;
@@ -134,9 +158,26 @@
             text-decoration: none;
             cursor: pointer;
         }
+
+            .forgot-link:hover {
+                text-decoration: underline;
+            }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+            .checkbox-group input {
+                width: auto;
+                cursor: pointer;
+            }
     </style>
 </head>
 <body>
+
     <div class="login-box">
         <h1>🎓 SpickerSeite</h1>
 
@@ -145,9 +186,10 @@
             <button class="tab-btn" id="t-reg" onclick="switchTab('reg')">Registrieren</button>
         </div>
 
-        <!-- HIER IST DAS WICHTIGE ELEMENT, DAS GEFEHLT HAT -->
+        <!-- Status Anzeige -->
         <div id="status-msg" class="status-msg"></div>
 
+        <!-- LOGIN FORM -->
         <div id="f-login">
             <div class="input-group">
                 <input type="email" id="l-email" placeholder="E-Mail" onkeydown="handleEnter(event, 'l-pass')">
@@ -156,23 +198,33 @@
                 <input type="password" id="l-pass" placeholder="Passwort" onkeydown="handleEnter(event, 'LOGIN')">
             </div>
             <div class="options-row">
-                <label><input type="checkbox" id="l-remember" checked> Angemeldet bleiben</label>
+                <label class="checkbox-group">
+                    <input type="checkbox" id="l-remember" checked> Angemeldet bleiben
+                </label>
                 <span class="forgot-link" onclick="doForgotPassword()">Passwort vergessen?</span>
             </div>
             <button class="btn" onclick="doLogin()">Anmelden</button>
         </div>
 
+        <!-- REGISTER FORM -->
         <div id="f-reg" style="display:none">
-            <div class="input-group"><input type="text" id="r-name" placeholder="Name" onkeydown="handleEnter(event, 'r-email')"></div>
-            <div class="input-group"><input type="email" id="r-email" placeholder="E-Mail" onkeydown="handleEnter(event, 'r-pass')"></div>
-            <div class="input-group"><input type="password" id="r-pass" placeholder="Passwort" onkeydown="handleEnter(event, 'REGISTER')"></div>
-            <button class="btn" onclick="doRegister()">Registrieren</button>
+            <div class="input-group">
+                <input type="text" id="r-name" placeholder="Vollständiger Name" onkeydown="handleEnter(event, 'r-email')">
+            </div>
+            <div class="input-group">
+                <input type="email" id="r-email" placeholder="E-Mail Adresse" onkeydown="handleEnter(event, 'r-pass')">
+            </div>
+            <div class="input-group">
+                <input type="password" id="r-pass" placeholder="Passwort (min. 6 Zeichen)" onkeydown="handleEnter(event, 'REGISTER')">
+            </div>
+            <button class="btn" onclick="doRegister()">Registrierung anfragen</button>
         </div>
     </div>
 
     <script>
         const SUPERADMIN = 'julianknuhr92@gmail.com';
 
+        // Enter-Taste Steuerung
         function handleEnter(e, action) {
             if (e.key === 'Enter') {
                 if (action === 'LOGIN') doLogin();
@@ -181,6 +233,7 @@
             }
         }
 
+        // Tab Wechsel
         function switchTab(t) {
             document.getElementById('f-login').style.display = t === 'login' ? 'block' : 'none';
             document.getElementById('f-reg').style.display = t === 'reg' ? 'block' : 'none';
@@ -189,57 +242,88 @@
             document.getElementById('status-msg').style.display = 'none';
         }
 
+        // LOGIN FUNKTION
         async function doLogin() {
             const email = document.getElementById('l-email').value.trim();
             const pass = document.getElementById('l-pass').value;
             const remember = document.getElementById('l-remember').checked;
-            if (!email || !pass) return alert("Bitte Felder ausfüllen!");
+
+            if (!email || !pass) return alert("Bitte E-Mail und Passwort eingeben!");
 
             try {
                 const f = window._firebaseFns;
+                // Sitzung speichern oder nicht
                 await f.setPersistence(window._auth, remember ? f.browserLocalPersistence : f.browserSessionPersistence);
+
                 const userCred = await f.signInWithEmailAndPassword(window._auth, email, pass);
                 const snap = await f.getDoc(f.doc(window._db, "users", userCred.user.uid));
                 const data = snap.data();
 
-                if (email.toLowerCase() === SUPERADMIN) window.location.href = 'admin.html';
-                else if (data && data.isApproved) window.location.href = 'start.html';
-                else alert("Warte auf Freischaltung durch Julian.");
-            } catch (e) { alert("Login fehlgeschlagen."); }
+                if (email.toLowerCase() === SUPERADMIN) {
+                    window.location.href = 'admin.html';
+                } else if (data && data.isApproved) {
+                    window.location.href = 'start.html';
+                } else {
+                    alert("Dein Account wurde noch nicht von Julian freigeschaltet.");
+                }
+            } catch (e) {
+                alert("Login fehlgeschlagen. Bitte Daten prüfen.");
+            }
         }
 
+        // REGISTRIERUNGS FUNKTION
         async function doRegister() {
             const name = document.getElementById('r-name').value.trim();
             const email = document.getElementById('r-email').value.trim();
             const pass = document.getElementById('r-pass').value;
-            if (!name || !email || !pass) return alert("Bitte alles ausfüllen!");
+
+            if (!name || !email || !pass) return alert("Bitte alle Felder ausfüllen!");
+            if (pass.length < 6) return alert("Das Passwort muss mindestens 6 Zeichen haben.");
 
             try {
                 const f = window._firebaseFns;
                 const userCred = await f.createUserWithEmailAndPassword(window._auth, email, pass);
+
                 await f.setDoc(f.doc(window._db, "users", userCred.user.uid), {
                     name, email, isApproved: false, isAdmin: false, createdAt: f.serverTimestamp()
                 });
-                alert("Anfrage gesendet!");
+
+                alert("Registrierung erfolgreich! Julian schaltet dich bald frei.");
                 switchTab('login');
-            } catch (e) { alert(e.message); }
+            } catch (e) {
+                alert("Fehler: " + e.message);
+            }
         }
 
+        // PASSWORT VERGESSEN FUNKTION
         async function doForgotPassword() {
             const email = document.getElementById('l-email').value.trim();
             const statusEl = document.getElementById('status-msg');
 
             if (!email) {
-                alert("Bitte gib zuerst deine E-Mail Adresse ein.");
+                alert("Bitte gib zuerst deine E-Mail Adresse in das Feld ein.");
+                document.getElementById('l-email').focus();
                 return;
             }
 
             try {
-                await window._firebaseFns.sendPasswordResetEmail(window._auth, email);
+                const f = window._firebaseFns;
+                const db = window._db;
 
-                // Jetzt existiert das Element sicher!
+                // Hintergrund-Check: Existiert der Account?
+                const q = f.query(f.collection(db, "users"), f.where("email", "==", email));
+                const querySnapshot = await f.getDocs(q);
+
+                if (querySnapshot.empty) {
+                    alert("Fehler: Zu dieser E-Mail Adresse wurde kein Account gefunden.");
+                    return;
+                }
+
+                // E-Mail senden
+                await f.sendPasswordResetEmail(window._auth, email);
+
                 if (statusEl) {
-                    statusEl.textContent = `Eine Email wurde an ${email} versendet.`;
+                    statusEl.textContent = `Eine Email zum Zurücksetzen wurde an ${email} versendet.`;
                     statusEl.style.display = 'block';
                     setTimeout(() => { statusEl.style.display = 'none'; }, 10000);
                 }
