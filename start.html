@@ -34,7 +34,7 @@
             border-radius: 15px;
             margin-bottom: 30px;
             border: 1px dashed rgba(255,255,255,0.3);
-            display: none; /* Standardmäßig versteckt */
+            display: none;
         }
 
             .admin-panel input {
@@ -109,6 +109,64 @@
             margin-top: 10px;
             display: inline-block;
         }
+
+        /* NEU: Modal für Benutzerwahl */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            background: #1b4f72;
+            margin: 5% auto;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 90%;
+            max-width: 500px;
+            border-radius: 15px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+            .user-item:hover {
+                background: rgba(255,255,255,0.1);
+            }
+
+            .user-item input {
+                margin-right: 15px;
+                cursor: pointer;
+                width: 20px;
+                height: 20px;
+            }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: bold;
+        }
+
+        .user-email {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -121,7 +179,6 @@
     </nav>
 
     <div class="container">
-        <!-- Admin Bereich zum Hinzufügen -->
         <div id="admin-area" class="admin-panel">
             <h3 style="margin-top:0">Admin: Neues Fach erstellen</h3>
             <input type="text" id="new-subject-name" placeholder="Name des Fachs (z.B. Mathe 1)">
@@ -129,15 +186,28 @@
         </div>
 
         <h1>Deine Fächer</h1>
-        <div class="subject-grid" id="subjects">
-            <!-- Fächer werden hier geladen -->
+        <div class="subject-grid" id="subjects"></div>
+    </div>
+
+    <!-- NEU: Das Auswahlfenster für die E-Mails -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0">Zugriff verwalten</h2>
+            <p id="modal-subject-name" style="opacity: 0.7; margin-bottom: 20px;"></p>
+            <div id="user-list-container">
+                <!-- Hier werden die Nutzer reingeladen -->
+            </div>
+            <div style="margin-top: 30px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn" style="background: #7f8c8d; color: white;" onclick="closeModal()">Abbrechen</button>
+                <button id="save-access-btn" class="btn btn-add">Speichern</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, getDocs, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -156,54 +226,39 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
-
             const snap = await getDoc(doc(db, "users", user.uid));
             currentUserData = snap.data();
-
             if (!currentUserData || !currentUserData.isApproved) {
                 alert("Dein Account ist noch nicht freigeschaltet!");
                 signOut(auth).then(() => window.location.href = 'login.html');
                 return;
             }
-
             document.getElementById('user-display').textContent = currentUserData.name + (currentUserData.isAdmin ? " (Admin)" : "");
-
-            // Admin Bereich anzeigen
             if (currentUserData.isAdmin) {
                 document.getElementById('admin-area').style.display = 'block';
             }
-
             loadSubjects(user.email, currentUserData.isAdmin);
         });
 
-        // Fächer laden mit Sichtbarkeits-Filter
         function loadSubjects(userEmail, isAdmin) {
             onSnapshot(collection(db, "subjects"), (snapshot) => {
                 const grid = document.getElementById('subjects');
                 grid.innerHTML = '';
-
                 snapshot.forEach(d => {
                     const sub = d.data();
                     const visibility = sub.visibility || 'alle';
                     const allowedEmails = sub.allowedEmails || [];
-
-                    // Logik: Wer darf das Fach sehen?
                     let hasAccess = false;
-                    if (isAdmin) {
-                        hasAccess = true; // Admin sieht alles
-                    } else if (visibility === 'alle') {
-                        hasAccess = true; // Jeder sieht es
-                    } else if (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail)) {
-                        hasAccess = true; // Nur bestimmte E-Mails
-                    }
-                    // 'niemand' wird oben durch !isAdmin abgefangen
+                    if (isAdmin) hasAccess = true;
+                    else if (visibility === 'alle') hasAccess = true;
+                    else if (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase())) hasAccess = true;
 
                     if (hasAccess) {
                         const div = document.createElement('div');
                         div.className = 'card';
                         div.innerHTML = `
                                 <h3>${sub.name}</h3>
-                                ${isAdmin ? `<span class="settings-icon" onclick="event.stopPropagation(); manageVisibility('${d.id}', '${sub.name}', '${visibility}', '${allowedEmails.join(', ')}')">⚙️</span>` : ''}
+                                ${isAdmin ? `<span class="settings-icon" onclick="event.stopPropagation(); manageVisibility('${d.id}', '${sub.name}', '${visibility}', ${JSON.stringify(allowedEmails)})">⚙️</span>` : ''}
                                 ${isAdmin ? `<span class="visibility-badge">${visibility}</span>` : ''}
                             `;
                         div.onclick = () => window.location.href = `fach.html?id=${d.id}`;
@@ -213,54 +268,84 @@
             });
         }
 
-        // Neues Fach erstellen (Admin)
         window.createNewSubject = async () => {
             const nameInput = document.getElementById('new-subject-name');
             const name = nameInput.value.trim();
             if (!name) return;
-
             try {
                 await addDoc(collection(db, "subjects"), {
                     name: name,
-                    visibility: 'alle', // Default
+                    visibility: 'alle',
                     allowedEmails: [],
                     createdAt: new Date()
                 });
                 nameInput.value = '';
-            } catch (e) {
-                alert("Fehler beim Erstellen: " + e.message);
+            } catch (e) { alert("Fehler: " + e.message); }
+        };
+
+        // --- HIER IST DIE NEUE LOGIK FÜR DIE SICHTBARKEIT ---
+        window.manageVisibility = async (id, name, currentVis, currentEmails) => {
+            const mode = prompt(`Sichtbarkeit für "${name}" ändern:\n1 = Alle\n2 = Niemand (Nur Admins)\n3 = Benutzerdefiniert (Nutzer wählen)`, "1");
+
+            if (mode === "1" || mode === "2") {
+                const newVis = mode === "1" ? 'alle' : 'niemand';
+                await updateDoc(doc(db, "subjects", id), { visibility: newVis, allowedEmails: [] });
+                return;
+            }
+
+            if (mode === "3") {
+                const modal = document.getElementById('userModal');
+                const container = document.getElementById('user-list-container');
+                document.getElementById('modal-subject-name').textContent = `Fach: ${name}`;
+                container.innerHTML = '<p>Lade Nutzerliste...</p>';
+                modal.style.display = 'block';
+
+                // Alle registrierten Nutzer aus Firestore laden
+                const usersSnap = await getDocs(collection(db, "users"));
+                container.innerHTML = '';
+
+                usersSnap.forEach(userDoc => {
+                    const userData = userDoc.data();
+                    const email = (userData.email || "").toLowerCase();
+                    if (!email) return;
+
+                    const isChecked = currentEmails.includes(email) ? 'checked' : '';
+
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `
+                            <input type="checkbox" value="${email}" ${isChecked}>
+                            <div class="user-info">
+                                <span class="user-name">${userData.name || 'Unbekannter Nutzer'}</span>
+                                <span class="user-email">${email}</span>
+                            </div>
+                        `;
+                    // Klick auf die ganze Zeile wählt die Checkbox aus
+                    div.onclick = (e) => {
+                        if (e.target.tagName !== 'INPUT') {
+                            const cb = div.querySelector('input');
+                            cb.checked = !cb.checked;
+                        }
+                    };
+                    container.appendChild(div);
+                });
+
+                // Speichern-Button im Modal
+                document.getElementById('save-access-btn').onclick = async () => {
+                    const selectedEmails = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+                    try {
+                        await updateDoc(doc(db, "subjects", id), {
+                            visibility: 'benutzerdefiniert',
+                            allowedEmails: selectedEmails
+                        });
+                        closeModal();
+                    } catch (e) { alert("Fehler beim Speichern: " + e.message); }
+                };
             }
         };
 
-        // Sichtbarkeit verwalten (Admin)
-        window.manageVisibility = async (id, name, currentVis, currentEmails) => {
-            const mode = prompt(`Sichtbarkeit für "${name}" ändern:\n1 = Alle (Standard)\n2 = Niemand (Nur Admins)\n3 = Benutzerdefiniert (E-Mails)`, "1");
-
-            let newVis = 'alle';
-            let newEmails = [];
-
-            if (mode === "2") {
-                newVis = 'niemand';
-            } else if (mode === "3") {
-                newVis = 'benutzerdefiniert';
-                const emailInput = prompt("Gib die E-Mails ein, die Zugriff haben sollen (mit Komma getrennt):", currentEmails);
-                if (emailInput !== null) {
-                    newEmails = emailInput.split(',').map(e => e.trim().toLowerCase()).filter(e => e !== "");
-                } else {
-                    return; // Abbrechen
-                }
-            } else if (mode !== "1") {
-                return; // Ungültige Eingabe
-            }
-
-            try {
-                await updateDoc(doc(db, "subjects", id), {
-                    visibility: newVis,
-                    allowedEmails: newEmails
-                });
-            } catch (e) {
-                alert("Fehler beim Aktualisieren: " + e.message);
-            }
+        window.closeModal = () => {
+            document.getElementById('userModal').style.display = 'none';
         };
 
         window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
