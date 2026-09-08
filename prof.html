@@ -17,9 +17,10 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
         }
 
-        /* --- NAVBAR (MASTER DESIGN) --- */
+        /* --- EINHEITLICHE NAVBAR (MASTER DESIGN) --- */
         .navbar {
             background: var(--navbar-bg);
             backdrop-filter: blur(15px);
@@ -89,7 +90,7 @@
 
         /* --- CONTENT --- */
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 40px auto;
             padding: 0 20px;
             flex: 1;
@@ -106,8 +107,8 @@
 
         .prof-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
         }
 
         .prof-card {
@@ -117,11 +118,12 @@
             text-align: center;
             border: 1px solid rgba(255,255,255,0.1);
             position: relative;
+            transition: transform 0.2s;
         }
 
         .prof-img {
-            width: 120px;
-            height: 120px;
+            width: 130px;
+            height: 130px;
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid #f1c40f;
@@ -134,7 +136,7 @@
             top: 15px;
             right: 15px;
             cursor: pointer;
-            opacity: 0.5;
+            opacity: 0.4;
             font-size: 1.2rem;
             transition: 0.2s;
         }
@@ -145,13 +147,14 @@
                 transform: rotate(45deg);
             }
 
+        /* Anekdoten Bereich */
         .entries-container {
             margin-top: 20px;
             text-align: left;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px;
             padding: 15px;
-            max-height: 300px;
+            max-height: 350px;
             overflow-y: auto;
         }
 
@@ -171,34 +174,43 @@
         .entry-text {
             font-size: 0.9rem;
             opacity: 0.9;
+            line-height: 1.4;
         }
 
         .entry-img {
             max-width: 100%;
             border-radius: 8px;
-            margin-top: 8px;
+            margin-top: 10px;
+            display: block;
         }
 
+        /* Inputs */
         input, textarea {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin-top: 10px;
             border-radius: 8px;
             border: none;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255,255,255,0.95);
             color: #333;
+            font-family: inherit;
         }
 
         .btn-action {
             background: #27ae60;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 20px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             margin-top: 10px;
+            transition: 0.2s;
         }
+
+            .btn-action:hover {
+                background: #2ecc71;
+            }
     </style>
 </head>
 <body>
@@ -208,7 +220,9 @@
         <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html">Chat 💬</a>
-            <a href="prof.html" style="border-bottom: 2px solid white;">Professoren</a>
+
+            <!-- Dynamische Links (Hilfe, Admin, Prof) werden per JS hier eingefügt -->
+
             <a href="profil.html" id="user-link-wrapper" class="user-link">
                 <span id="user-display" class="user-display">Lade...</span>
             </a>
@@ -217,17 +231,19 @@
     </nav>
 
     <div class="container">
-        <!-- ADMIN: PROF HINZUFÜGEN -->
+        <!-- ADMIN BEREICH: PROF HINZUFÜGEN -->
         <div id="admin-prof-add" class="admin-section">
-            <h3>👨‍🏫 Neuen Professor hinzufügen (Admin)</h3>
+            <h3 style="margin-top:0">👨‍🏫 Neuen Professor hinzufügen (Admin)</h3>
             <input type="text" id="new-prof-name" placeholder="Name des Professors">
-            <label style="display:block; margin-top:10px; font-size: 0.8rem;">Profilbild (optional):</label>
+            <label style="display:block; margin-top:15px; font-size: 0.8rem; opacity: 0.8;">Profilbild (optional):</label>
             <input type="file" id="new-prof-photo" accept="image/*">
-            <button class="btn-action" onclick="addProfessor()">Professor speichern</button>
+            <button class="btn-action" onclick="addProfessor()">Professor anlegen</button>
         </div>
 
         <h1>Unsere Professoren</h1>
-        <div class="prof-grid" id="prof-grid"></div>
+        <div class="prof-grid" id="prof-grid">
+            <!-- Professoren-Karten werden hier geladen -->
+        </div>
     </div>
 
     <script type="module">
@@ -257,29 +273,37 @@
             if (!user) { window.location.href = 'login.html'; return; }
             const snap = await getDoc(doc(db, "users", user.uid));
             currentUserData = snap.data();
+            if (!currentUserData) return;
+
             document.getElementById('user-display').textContent = currentUserData.name;
 
             const navContainer = document.getElementById('nav-links-container');
             const userLinkWrapper = document.getElementById('user-link-wrapper');
 
-            if (!currentUserData.isAdmin) {
-                const helpA = document.createElement('a');
-                helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
-                navContainer.insertBefore(helpA, userLinkWrapper);
-            } else {
-                const adminA = document.createElement('a');
-                adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+            // Navbar Links dynamisch aufbauen (Logik wie start.html)
+            if (currentUserData.isAdmin) {
+                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
                 navContainer.insertBefore(adminA, userLinkWrapper);
                 document.getElementById('admin-prof-add').style.display = 'block';
+            } else {
+                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userLinkWrapper);
             }
+
+            const profA = document.createElement('a');
+            profA.href = 'prof.html';
+            profA.textContent = 'Professoren';
+            profA.style.borderBottom = "2px solid white"; // Aktiv markieren
+            navContainer.insertBefore(profA, userLinkWrapper);
 
             loadProfessors();
         });
 
+        // PROFESSOR HINZUFÜGEN (Admin)
         window.addProfessor = async () => {
             const name = document.getElementById('new-prof-name').value.trim();
             const file = document.getElementById('new-prof-photo').files[0];
-            if (!name) return alert("Name wird benötigt!");
+            if (!name) return alert("Bitte gib einen Namen ein!");
 
             let photoUrl = DEFAULT_AVATAR;
             if (file) {
@@ -291,11 +315,12 @@
             await addDoc(collection(db, "professors"), {
                 name: name, photoUrl: photoUrl, createdAt: serverTimestamp()
             });
-            alert("Professor hinzugefügt!");
+            alert("Professor erfolgreich hinzugefügt!");
             document.getElementById('new-prof-name').value = '';
             document.getElementById('new-prof-photo').value = '';
         };
 
+        // PROFESSOREN LADEN
         function loadProfessors() {
             onSnapshot(collection(db, "professors"), (snapshot) => {
                 const grid = document.getElementById('prof-grid');
@@ -305,26 +330,26 @@
                     const card = document.createElement('div');
                     card.className = 'prof-card';
                     card.innerHTML = `
-                            ${currentUserData.isAdmin ? `<span class="edit-icon" onclick="editProfessor('${d.id}', '${prof.name}')">⚙️</span>` : ''}
-                            <img src="${prof.photoUrl || DEFAULT_AVATAR}" class="prof-img">
-                            <h2 id="name-${d.id}">${prof.name}</h2>
-                            <div class="entries-container" id="entries-${d.id}">Lade Beiträge...</div>
-                            <textarea id="input-text-${d.id}" placeholder="Anekdote schreiben..."></textarea>
-                            <input type="file" id="input-file-${d.id}" accept="image/*">
-                            <button class="btn-action" onclick="addEntry('${d.id}')">Posten</button>
-                        `;
+                                ${currentUserData.isAdmin ? `<span class="edit-icon" onclick="editProfessor('${d.id}', '${prof.name}')">⚙️</span>` : ''}
+                                <img src="${prof.photoUrl || DEFAULT_AVATAR}" class="prof-img">
+                                <h2 style="margin: 10px 0;">${prof.name}</h2>
+                                <div class="entries-container" id="entries-${d.id}">Lade Anekdoten...</div>
+                                <textarea id="input-text-${d.id}" placeholder="Schreibe eine Anekdote oder Info..."></textarea>
+                                <input type="file" id="input-file-${d.id}" accept="image/*">
+                                <button class="btn-action" onclick="addEntry('${d.id}')">Posten</button>
+                            `;
                     grid.appendChild(card);
                     loadEntries(d.id);
                 });
             });
         }
 
+        // PROFESSOR BEARBEITEN (Admin)
         window.editProfessor = async (id, currentName) => {
             const newName = prompt("Neuen Namen für den Professor eingeben:", currentName);
             if (newName === null) return;
 
             const changePhoto = confirm("Möchtest du auch das Profilbild ändern?");
-            let newPhotoUrl = null;
 
             if (changePhoto) {
                 const fileInput = document.createElement('input');
@@ -332,33 +357,38 @@
                 fileInput.accept = 'image/*';
                 fileInput.onchange = async (e) => {
                     const file = e.target.files[0];
+                    if (!file) return;
                     const sRef = ref(storage, `profs/${Date.now()}_${file.name}`);
                     const snap = await uploadBytes(sRef, file);
-                    newPhotoUrl = await getDownloadURL(snap.ref);
+                    const newPhotoUrl = await getDownloadURL(snap.ref);
 
                     await updateDoc(doc(db, "professors", id), {
                         name: newName || currentName,
                         photoUrl: newPhotoUrl
                     });
-                    alert("Professor aktualisiert!");
+                    alert("Professor wurde aktualisiert!");
                 };
                 fileInput.click();
             } else {
                 await updateDoc(doc(db, "professors", id), { name: newName || currentName });
-                alert("Name aktualisiert!");
+                alert("Name wurde aktualisiert!");
             }
         };
 
+        // BEITRÄGE/ANEKDOTEN LADEN
         function loadEntries(profId) {
             const q = query(collection(db, "prof_entries"), where("profId", "==", profId), orderBy("createdAt", "desc"));
             onSnapshot(q, (snap) => {
                 const container = document.getElementById(`entries-${profId}`);
-                container.innerHTML = snap.empty ? '<p style="opacity:0.5; font-size:0.8rem;">Noch keine Beiträge.</p>' : '';
+                container.innerHTML = snap.empty ? '<p style="opacity:0.5; font-size:0.8rem; text-align:center;">Noch keine Beiträge vorhanden.</p>' : '';
                 snap.forEach(docEntry => {
                     const e = docEntry.data();
                     const div = document.createElement('div');
                     div.className = 'entry';
+
+                    // Admin Logik: Name weglassen (Anonym)
                     const nameLabel = e.isAdminEntry ? '' : `<div class="entry-user">${e.userName}</div>`;
+
                     div.innerHTML = `
                             ${nameLabel}
                             <div class="entry-text">${e.text}</div>
@@ -369,10 +399,11 @@
             });
         }
 
+        // NEUEN BEITRAG POSTEN
         window.addEntry = async (profId) => {
             const text = document.getElementById(`input-text-${profId}`).value.trim();
             const file = document.getElementById(`input-file-${profId}`).files[0];
-            if (!text && !file) return;
+            if (!text && !file) return alert("Bitte gib einen Text ein oder wähle ein Foto!");
 
             let photoUrl = null;
             if (file) {
@@ -382,10 +413,14 @@
             }
 
             await addDoc(collection(db, "prof_entries"), {
-                profId: profId, text: text, photoUrl: photoUrl,
-                userName: currentUserData.name, isAdminEntry: currentUserData.isAdmin || false,
+                profId: profId,
+                text: text,
+                photoUrl: photoUrl,
+                userName: currentUserData.name,
+                isAdminEntry: currentUserData.isAdmin || false, // Merken ob Admin für Anonymität
                 createdAt: serverTimestamp()
             });
+
             document.getElementById(`input-text-${profId}`).value = '';
             document.getElementById(`input-file-${profId}`).value = '';
         };
