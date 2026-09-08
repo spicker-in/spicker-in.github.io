@@ -6,52 +6,90 @@
     <style>
         body {
             margin: 0;
-            font-family: sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background: #1b4f72;
             color: white;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
+        /* Vereinheitlichte Navbar */
         .navbar {
             background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(15px);
             padding: 15px 40px;
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
         }
 
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+            .nav-links a {
+                color: white;
+                text-decoration: none;
+                font-weight: bold;
+                opacity: 0.8;
+                transition: 0.3s;
+            }
+
+                .nav-links a:hover {
+                    opacity: 1;
+                }
+
+        /* Chat Layout */
         .chat-container {
             flex: 1;
             display: flex;
             overflow: hidden;
         }
 
-        /* Sidebar für Admin */
+        /* Sidebar für Admin (Nutzerliste) */
         .chat-sidebar {
-            width: 250px;
+            width: 280px;
             background: rgba(0,0,0,0.2);
             border-right: 1px solid rgba(255,255,255,0.1);
-            overflow-y: auto;
-            display: none;
+            display: none; /* Wird nur für Admins eingeblendet */
+            flex-direction: column;
         }
 
-        .user-link {
-            padding: 15px;
+        .sidebar-header {
+            padding: 20px;
+            font-weight: bold;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer;
+            background: rgba(255,255,255,0.05);
         }
 
-            .user-link:hover {
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+            .user-item:hover, .user-item.active {
                 background: rgba(255,255,255,0.1);
             }
 
-        /* Haupt-Chat */
+        /* Haupt-Chatbereich */
         .chat-main {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
         }
 
         #message-area {
@@ -60,82 +98,135 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
+        /* Sprechblasen */
         .msg {
             max-width: 70%;
-            padding: 10px 15px;
-            border-radius: 15px;
-            font-size: 0.9rem;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            position: relative;
         }
 
             .msg.sent {
                 align-self: flex-end;
                 background: #27ae60;
+                border-bottom-right-radius: 4px;
             }
 
             .msg.received {
                 align-self: flex-start;
-                background: rgba(255,255,255,0.2);
+                background: rgba(255,255,255,0.15);
+                border-bottom-left-radius: 4px;
             }
 
             .msg img {
                 max-width: 100%;
                 border-radius: 10px;
-                margin-top: 5px;
+                margin-top: 8px;
+                display: block;
             }
 
+        .msg-info {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-top: 5px;
+            display: block;
+            text-align: right;
+        }
+
+        /* Eingabebereich */
         .chat-input-area {
             padding: 20px;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
         }
 
-        input[type="text"] {
-            flex: 1;
-            padding: 12px;
-            border-radius: 25px;
-            border: none;
-        }
+            .chat-input-area input[type="text"] {
+                flex: 1;
+                padding: 12px 20px;
+                border-radius: 25px;
+                border: none;
+                background: rgba(255,255,255,0.9);
+                color: #333;
+                font-size: 1rem;
+            }
 
         .btn-icon {
-            background: none;
+            background: rgba(255,255,255,0.1);
             border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
             color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
         }
+
+            .btn-icon:hover {
+                background: rgba(255,255,255,0.2);
+            }
+
+        .btn-send {
+            background: #3498db;
+        }
+
+            .btn-send:hover {
+                background: #2980b9;
+            }
     </style>
 </head>
 <body>
+
     <nav class="navbar">
-        <div style="font-weight: bold;">💬 Nachrichten</div>
-        <div><a href="start.html" style="color: white; text-decoration: none;">Zurück</a></div>
+        <div style="font-weight: bold; font-size: 1.2rem;">💬 Nachrichten</div>
+        <div class="nav-links" id="nav-links-container">
+            <a href="start.html">Start</a>
+            <a href="chat.html" style="border-bottom: 2px solid white;">Chat 💬</a>
+            <a href="profil.html">Profil</a>
+            <!-- Hilfe/Admin/Fächer/Prof werden hier eingefügt -->
+            <span id="user-display" style="margin-left: 10px; opacity: 0.8; font-size: 0.9rem;">Lade...</span>
+            <a href="#" id="logout-btn" style="opacity: 0.6;">Abmelden</a>
+        </div>
     </nav>
 
     <div class="chat-container">
-        <aside class="chat-sidebar" id="admin-sidebar"></aside>
-        <main class="chat-main">
-            <div id="message-area"></div>
-            <div class="chat-input-area">
-                <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
-                <button class="btn-icon" onclick="document.getElementById('photo-input').click()">📷</button>
-                <input type="file" id="file-input" hidden onchange="uploadFile(this.files[0])">
-                <input type="file" id="photo-input" hidden accept="image/*" capture="environment" onchange="uploadFile(this.files[0])">
+        <aside class="chat-sidebar" id="admin-sidebar">
+            <div class="sidebar-header">Alle Chats (Admin)</div>
+            <div class="user-list" id="user-list-container"></div>
+        </aside>
 
-                <input type="text" id="msg-input" placeholder="Nachricht schreiben...">
-                <button class="btn-icon" onclick="sendMessage()">🚀</button>
+        <main class="chat-main">
+            <div id="message-area">
+                <p style="text-align: center; opacity: 0.5; margin-top: 50px;">Wähle einen Chat aus oder schreibe eine Nachricht...</p>
+            </div>
+
+            <div class="chat-input-area">
+                <button class="btn-icon" title="Datei anhängen" onclick="document.getElementById('file-input').click()">📎</button>
+                <button class="btn-icon" title="Foto machen" onclick="document.getElementById('photo-input').click()">📷</button>
+
+                <input type="file" id="file-input" hidden onchange="handleFileUpload(this.files[0], 'file')">
+                <input type="file" id="photo-input" hidden accept="image/*" capture="environment" onchange="handleFileUpload(this.files[0], 'image')">
+
+                <input type="text" id="msg-input" placeholder="Nachricht schreiben..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button class="btn-icon btn-send" onclick="sendMessage()">🚀</button>
             </div>
         </main>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
@@ -153,55 +244,85 @@
         const storage = getStorage(app);
 
         let currentUser = null;
-        let activeChatPartner = 'system'; // Standardmäßig System/Admin Chat
+        let activeChatPartner = 'system'; // Standard für User
+        let unsubscribe = null;
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) return window.location.href = 'login.html';
             currentUser = user;
 
-            // Admin-Logik: Sidebar füllen
-            if (user.email === 'julianknuhr92@gmail.com') {
-                document.getElementById('admin-sidebar').style.display = 'block';
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            const userData = userSnap.data();
+            document.getElementById('user-display').textContent = userData.name;
+
+            // DYNAMISCHE NAVBAR
+            const navContainer = document.getElementById('nav-links-container');
+            const userDisplay = document.getElementById('user-display');
+
+            if (!userData.isAdmin) {
+                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userDisplay);
+            }
+
+            const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+            const fachA = document.createElement('a'); fachA.href = 'fach.html'; fachA.textContent = 'Fächer';
+            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
+
+            navContainer.insertBefore(adminA, userDisplay);
+            navContainer.insertBefore(fachA, userDisplay);
+            navContainer.insertBefore(profA, userDisplay);
+
+            // ADMIN SIDEBAR LOGIK
+            if (userData.isAdmin) {
+                document.getElementById('admin-sidebar').style.display = 'flex';
                 const usersSnap = await getDocs(collection(db, "users"));
-                usersSnap.forEach(doc => {
-                    if (doc.data().email !== user.email) {
+                const sidebarList = document.getElementById('user-list-container');
+                usersSnap.forEach(uDoc => {
+                    if (uDoc.id !== user.uid) {
                         const div = document.createElement('div');
-                        div.className = 'user-link';
-                        div.textContent = doc.data().name;
-                        div.onclick = () => loadChat(doc.id);
-                        document.getElementById('admin-sidebar').appendChild(div);
+                        div.className = 'user-item';
+                        div.textContent = uDoc.data().name;
+                        div.onclick = () => {
+                            document.querySelectorAll('.user-item').forEach(i => i.classList.remove('active'));
+                            div.classList.add('active');
+                            startChat(uDoc.id);
+                        };
+                        sidebarList.appendChild(div);
                     }
                 });
+            } else {
+                startChat('system'); // User chattet mit System/Admin
             }
-            loadChat(activeChatPartner);
         });
 
-        function loadChat(partnerUid) {
-            activeChatPartner = partnerUid;
-            const area = document.getElementById('message-area');
+        function startChat(partnerId) {
+            activeChatPartner = partnerId;
+            if (unsubscribe) unsubscribe();
 
-            // Query: Nachrichten zwischen mir und Partner (oder alle für Admin)
             const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
 
-            onSnapshot(q, (snap) => {
+            unsubscribe = onSnapshot(q, (snap) => {
+                const area = document.getElementById('message-area');
                 area.innerHTML = '';
+
                 snap.forEach(d => {
                     const m = d.data();
-                    // Filter: Zeige nur Nachrichten, die mich betreffen (außer ich bin Admin)
                     const isAdmin = currentUser.email === 'julianknuhr92@gmail.com';
-                    const isMyMessage = m.senderUid === currentUser.uid || m.receiverUid === currentUser.uid;
 
-                    if (isAdmin || isMyMessage) {
+                    // Filter: Admin sieht alles, User sieht nur seinen Chat mit Admin/System
+                    const isRelevant = isAdmin || (m.senderUid === currentUser.uid || m.receiverUid === currentUser.uid);
+
+                    if (isRelevant) {
                         const div = document.createElement('div');
                         div.className = `msg ${m.senderUid === currentUser.uid ? 'sent' : 'received'}`;
 
                         if (m.type === 'text') div.textContent = m.text;
-                        if (m.type === 'file') {
-                            div.innerHTML = `<a href="${m.url}" target="_blank" style="color:white">📎 Datei: ${m.fileName}</a>`;
-                        }
-                        if (m.type === 'image') {
-                            div.innerHTML = `<img src="${m.url}"><br><small>${m.text || ''}</small>`;
-                        }
+                        else if (m.type === 'image') div.innerHTML = `<img src="${m.url}"><br>${m.text || ''}`;
+                        else if (m.type === 'file') div.innerHTML = `<a href="${m.url}" target="_blank" style="color:white">📎 ${m.fileName}</a>`;
+
+                        const time = m.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        div.innerHTML += `<span class="msg-info">${m.senderName} • ${time}</span>`;
+
                         area.appendChild(div);
                     }
                 });
@@ -211,27 +332,29 @@
 
         window.sendMessage = async () => {
             const input = document.getElementById('msg-input');
-            if (!input.value.trim()) return;
+            const text = input.value.trim();
+            if (!text) return;
+
             await addDoc(collection(db, "messages"), {
                 senderUid: currentUser.uid,
-                senderName: currentUser.displayName || 'Nutzer',
+                senderName: document.getElementById('user-display').textContent.split(' ')[0],
                 receiverUid: activeChatPartner,
-                text: input.value,
-                timestamp: new Date(),
-                type: 'text'
+                text: text,
+                type: 'text',
+                timestamp: new Date()
             });
             input.value = '';
         };
 
-        window.uploadFile = async (file) => {
+        window.handleFileUpload = async (file, type) => {
             if (!file) return;
             const fileRef = ref(storage, `chats/${Date.now()}_${file.name}`);
             const snapshot = await uploadBytes(fileRef, file);
             const url = await getDownloadURL(snapshot.ref);
 
-            const type = file.type.startsWith('image/') ? 'image' : 'file';
             await addDoc(collection(db, "messages"), {
                 senderUid: currentUser.uid,
+                senderName: document.getElementById('user-display').textContent.split(' ')[0],
                 receiverUid: activeChatPartner,
                 url: url,
                 fileName: file.name,
@@ -239,6 +362,8 @@
                 timestamp: new Date()
             });
         };
+
+        document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
     </script>
 </body>
 </html>

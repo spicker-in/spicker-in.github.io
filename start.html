@@ -32,6 +32,7 @@
             align-items: center;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .nav-links {
@@ -151,11 +152,13 @@
     <nav class="navbar">
         <div style="font-weight: bold; font-size: 1.2rem;">🎓 Spicker Informatik</div>
         <div class="nav-links" id="nav-links-container">
-            <a href="start.html">Start</a>
+            <a href="start.html" style="border-bottom: 2px solid white;">Start</a>
             <a href="chat.html">Chat 💬</a>
             <a href="profil.html">Profil</a>
-            <a href="support.html">Support</a>
-            <!-- Hier wird Admin oder Hilfe eingefügt -->
+            <!-- Hilfe wird hier für User eingefügt -->
+            <a href="admin.html">Admin</a>
+            <a href="fach.html">Fächer</a>
+            <a href="prof.html">Professoren</a>
             <span id="user-display" style="margin-left: 10px; opacity: 0.8; font-size: 0.9rem;">Lade...</span>
             <a href="#" onclick="logout()" style="opacity: 0.6;">Abmelden</a>
         </div>
@@ -175,7 +178,7 @@
             </div>
             <div id="welcome-message">
                 <h1>Willkommen!</h1>
-                <p>Wähle ein Fach aus der Liste links aus, um die Inhalte zu sehen.</p>
+                <p>Wähle ein Fach aus der Liste links aus.</p>
             </div>
         </main>
     </div>
@@ -205,20 +208,17 @@
 
             document.getElementById('user-display').textContent = data.name;
 
-            // DYNAMISCHER LINK: Admin oder Hilfe
-            const navContainer = document.getElementById('nav-links-container');
-            const dynamicLink = document.createElement('a');
-
-            if (data.isAdmin) {
-                dynamicLink.href = 'admin.html';
-                dynamicLink.textContent = 'Admin 🛠';
-                document.getElementById('admin-area').style.display = 'block';
+            // HILFE LINK NUR FÜR NICHT-ADMINS
+            if (!data.isAdmin) {
+                const navContainer = document.getElementById('nav-links-container');
+                const helpLink = document.createElement('a');
+                helpLink.href = 'help.html';
+                helpLink.textContent = 'Hilfe ❓';
+                // Vor dem Admin-Link einfügen
+                navContainer.insertBefore(helpLink, navContainer.querySelector('a[href="admin.html"]'));
             } else {
-                dynamicLink.href = 'help.html';
-                dynamicLink.textContent = 'Hilfe ❓';
+                document.getElementById('admin-area').style.display = 'block';
             }
-            // Vor dem User-Display einfügen
-            navContainer.insertBefore(dynamicLink, document.getElementById('user-display'));
 
             loadSubjects(user.email, data.isAdmin);
         });
