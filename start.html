@@ -284,7 +284,6 @@
                     const visibility = sub.visibility || 'alle';
                     const allowedEmails = sub.allowedEmails || [];
                     let hasAccess = isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()));
-
                     if (hasAccess) {
                         const item = document.createElement('div');
                         item.className = 'subject-item';

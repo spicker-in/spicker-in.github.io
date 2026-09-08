@@ -2,12 +2,23 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Chat – SpickerSeite</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat – Spicker Informatik</title>
     <style>
+        :root {
+            --sidebar-bg: #f8f9fa;
+            --sidebar-border: #dee2e6;
+            --text-dark: #333;
+            --primary-blue: #1b4f72;
+            --hover-grey: #e9ecef;
+            --wa-green: #005c4b;
+            --wa-bg: #0b141a;
+        }
+
         body {
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #1b4f72;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-blue);
             color: white;
             height: 100vh;
             display: flex;
@@ -15,210 +26,291 @@
             overflow: hidden;
         }
 
-        /* Vereinheitlichte Navbar */
+        /* --- NAVBAR (MASTER DESIGN) --- */
         .navbar {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
-            padding: 15px 40px;
+            -webkit-backdrop-filter: blur(15px);
+            padding: 0 40px;
+            height: 70px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .nav-brand {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: white;
         }
 
         .nav-links {
             display: flex;
-            gap: 20px;
             align-items: center;
+            gap: 25px;
         }
 
             .nav-links a {
                 color: white;
                 text-decoration: none;
-                font-weight: bold;
+                font-weight: 500;
                 opacity: 0.8;
                 transition: 0.3s;
+                font-size: 0.95rem;
             }
 
                 .nav-links a:hover {
                     opacity: 1;
                 }
 
-        /* Chat Layout */
-        .chat-container {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
+        .user-link {
+            text-decoration: none;
+            transition: 0.3s;
+            margin-left: 10px;
         }
 
-        /* Sidebar für Admin (Nutzerliste) */
-        .chat-sidebar {
-            width: 280px;
-            background: rgba(0,0,0,0.2);
-            border-right: 1px solid rgba(255,255,255,0.1);
-            display: none; /* Wird nur für Admins eingeblendet */
+            .user-link:hover .user-display {
+                opacity: 1;
+                text-decoration: underline;
+            }
+
+        .user-display {
+            opacity: 0.7;
+            font-size: 0.9rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logout-btn {
+            opacity: 0.5;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        /* --- CHAT LAYOUT --- */
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            background: var(--wa-bg);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 350px;
+            background: #111b21;
+            border-right: 1px solid #222d34;
+            display: flex;
             flex-direction: column;
         }
 
         .sidebar-header {
             padding: 20px;
             font-weight: bold;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid #222d34;
+            color: #e9edef;
         }
 
-        .user-list {
+        .contact-list {
             flex: 1;
             overflow-y: auto;
         }
 
-        .user-item {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 20px;
             cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
             transition: 0.2s;
         }
 
-            .user-item:hover, .user-item.active {
-                background: rgba(255,255,255,0.1);
+            .contact-item:hover {
+                background: #202c33;
             }
 
-        /* Haupt-Chatbereich */
-        .chat-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: rgba(255,255,255,0.02);
-        }
-
-        #message-area {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        /* Sprechblasen */
-        .msg {
-            max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            position: relative;
-        }
-
-            .msg.sent {
-                align-self: flex-end;
-                background: #27ae60;
-                border-bottom-right-radius: 4px;
+            .contact-item.active {
+                background: #2a3942;
             }
 
-            .msg.received {
-                align-self: flex-start;
-                background: rgba(255,255,255,0.15);
-                border-bottom-left-radius: 4px;
-            }
-
-            .msg img {
-                max-width: 100%;
-                border-radius: 10px;
-                margin-top: 8px;
-                display: block;
-            }
-
-        .msg-info {
-            font-size: 0.7rem;
-            opacity: 0.6;
-            margin-top: 5px;
-            display: block;
-            text-align: right;
-        }
-
-        /* Eingabebereich */
-        .chat-input-area {
-            padding: 20px;
-            background: rgba(0,0,0,0.3);
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-            .chat-input-area input[type="text"] {
-                flex: 1;
-                padding: 12px 20px;
-                border-radius: 25px;
-                border: none;
-                background: rgba(255,255,255,0.9);
-                color: #333;
-                font-size: 1rem;
-            }
-
-        .btn-icon {
-            background: rgba(255,255,255,0.1);
-            border: none;
+        .avatar {
             width: 45px;
             height: 45px;
             border-radius: 50%;
-            color: white;
-            font-size: 1.2rem;
-            cursor: pointer;
+            background: #2c6e8a;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: 0.2s;
+            font-weight: bold;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+            .chat-area::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+                opacity: 0.06;
+                pointer-events: none;
+            }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 1;
+        }
+
+        /* Sprechblasen */
+        .msg-row {
+            display: flex;
+            margin-bottom: 2px;
+        }
+
+            .msg-row.own {
+                justify-content: flex-end;
+            }
+
+        .bubble {
+            max-width: 65%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14.5px;
+            position: relative;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+        }
+
+        .msg-row.own .bubble {
+            background: var(--wa-green);
+            border-top-right-radius: 0;
+        }
+
+        .msg-row:not(.own) .bubble {
+            background: #202c33;
+            border-top-left-radius: 0;
+        }
+
+        .msg-meta {
+            display: flex;
+            justify-content: flex-end;
+            gap: 4px;
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        /* Input Area */
+        .input-area {
+            background: #202c33;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 2;
+        }
+
+        .input-wrap {
+            flex: 1;
+            background: #2a3942;
+            border-radius: 8px;
+            padding: 5px 15px;
+        }
+
+        textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            padding: 10px 0;
+            max-height: 150px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: #8696a0;
+            font-size: 24px;
+            cursor: pointer;
         }
 
             .btn-icon:hover {
-                background: rgba(255,255,255,0.2);
+                color: white;
             }
 
-        .btn-send {
-            background: #3498db;
+        .send-btn {
+            color: #00a884;
         }
 
-            .btn-send:hover {
-                background: #2980b9;
+        /* Datums-Trenner */
+        .date-divider {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+
+            .date-divider span {
+                background: #182229;
+                padding: 5px 12px;
+                border-radius: 8px;
+                font-size: 11px;
+                color: #8696a0;
             }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div style="font-weight: bold; font-size: 1.2rem;">💬 Nachrichten</div>
+        <div class="nav-brand">🎓 Spicker Informatik</div>
         <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html" style="border-bottom: 2px solid white;">Chat 💬</a>
-            <a href="profil.html">Profil</a>
-            <!-- Hilfe/Admin/Fächer/Prof werden hier eingefügt -->
-            <span id="user-display" style="margin-left: 10px; opacity: 0.8; font-size: 0.9rem;">Lade...</span>
-            <a href="#" id="logout-btn" style="opacity: 0.6;">Abmelden</a>
+            <a href="profil.html" id="user-link-wrapper" class="user-link">
+                <span id="user-display" class="user-display">Lade...</span>
+            </a>
+            <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
         </div>
     </nav>
 
-    <div class="chat-container">
-        <aside class="chat-sidebar" id="admin-sidebar">
-            <div class="sidebar-header">Alle Chats (Admin)</div>
-            <div class="user-list" id="user-list-container"></div>
+    <div class="main-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">Chats</div>
+            <div class="contact-list" id="contact-list">
+                <div style="padding: 20px; opacity: 0.5;">Lade Kontakte...</div>
+            </div>
         </aside>
 
-        <main class="chat-main">
-            <div id="message-area">
-                <p style="text-align: center; opacity: 0.5; margin-top: 50px;">Wähle einen Chat aus oder schreibe eine Nachricht...</p>
+        <main class="chat-area">
+            <div class="messages-container" id="messages-container">
+                <div style="text-align: center; margin-top: 100px; opacity: 0.5;">
+                    <h3>Willkommen im Chat</h3>
+                    <p>Wähle links einen Kontakt aus, um zu schreiben.</p>
+                </div>
             </div>
 
-            <div class="chat-input-area">
-                <button class="btn-icon" title="Datei anhängen" onclick="document.getElementById('file-input').click()">📎</button>
-                <button class="btn-icon" title="Foto machen" onclick="document.getElementById('photo-input').click()">📷</button>
-
-                <input type="file" id="file-input" hidden onchange="handleFileUpload(this.files[0], 'file')">
-                <input type="file" id="photo-input" hidden accept="image/*" capture="environment" onchange="handleFileUpload(this.files[0], 'image')">
-
-                <input type="text" id="msg-input" placeholder="Nachricht schreiben..." onkeypress="if(event.key==='Enter') sendMessage()">
-                <button class="btn-icon btn-send" onclick="sendMessage()">🚀</button>
+            <div class="input-area" id="input-area" style="display: none;">
+                <button class="btn-icon">📎</button>
+                <div class="input-wrap">
+                    <textarea id="msg-input" placeholder="Nachricht schreiben..." rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+                </div>
+                <button class="btn-icon send-btn" onclick="sendMessage()">➤</button>
             </div>
         </main>
     </div>
@@ -226,8 +318,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -241,129 +332,132 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const storage = getStorage(app);
 
         let currentUser = null;
-        let activeChatPartner = 'system'; // Standard für User
-        let unsubscribe = null;
+        let activeChatId = null;
+        let unsubMessages = null;
 
         onAuthStateChanged(auth, async (user) => {
-            if (!user) return window.location.href = 'login.html';
+            if (!user) { window.location.href = 'login.html'; return; }
             currentUser = user;
 
-            const userSnap = await getDoc(doc(db, "users", user.uid));
-            const userData = userSnap.data();
-            document.getElementById('user-display').textContent = userData.name;
+            const snap = await getDoc(doc(db, "users", user.uid));
+            const data = snap.data();
+            document.getElementById('user-display').textContent = data.name;
 
-            // DYNAMISCHE NAVBAR
+            // Navbar Logik
             const navContainer = document.getElementById('nav-links-container');
-            const userDisplay = document.getElementById('user-display');
-
-            if (!userData.isAdmin) {
-                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
-                navContainer.insertBefore(helpA, userDisplay);
-            }
-
-            const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
-            const fachA = document.createElement('a'); fachA.href = 'fach.html'; fachA.textContent = 'Fächer';
-            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
-
-            navContainer.insertBefore(adminA, userDisplay);
-            navContainer.insertBefore(fachA, userDisplay);
-            navContainer.insertBefore(profA, userDisplay);
-
-            // ADMIN SIDEBAR LOGIK
-            if (userData.isAdmin) {
-                document.getElementById('admin-sidebar').style.display = 'flex';
-                const usersSnap = await getDocs(collection(db, "users"));
-                const sidebarList = document.getElementById('user-list-container');
-                usersSnap.forEach(uDoc => {
-                    if (uDoc.id !== user.uid) {
-                        const div = document.createElement('div');
-                        div.className = 'user-item';
-                        div.textContent = uDoc.data().name;
-                        div.onclick = () => {
-                            document.querySelectorAll('.user-item').forEach(i => i.classList.remove('active'));
-                            div.classList.add('active');
-                            startChat(uDoc.id);
-                        };
-                        sidebarList.appendChild(div);
-                    }
-                });
+            const userLink = document.getElementById('user-link-wrapper');
+            if (data.isAdmin) {
+                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                navContainer.insertBefore(adminA, userLink);
             } else {
-                startChat('system'); // User chattet mit System/Admin
+                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userLink);
             }
+            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
+            navContainer.insertBefore(profA, userLink);
+
+            loadContacts(data.isAdmin);
         });
 
-        function startChat(partnerId) {
-            activeChatPartner = partnerId;
-            if (unsubscribe) unsubscribe();
+        async function loadContacts(isAdmin) {
+            const list = document.getElementById('contact-list');
+            list.innerHTML = '';
 
-            const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
+            // 1. Gruppen-Chat für alle
+            const groupItem = createContactItem('group_all', '🏠 Informatik-Gruppe', 'Alle Mitglieder');
+            list.appendChild(groupItem);
 
-            unsubscribe = onSnapshot(q, (snap) => {
-                const area = document.getElementById('message-area');
-                area.innerHTML = '';
+            // 2. Alle anderen User laden
+            const usersSnap = await getDocs(collection(db, "users"));
+            usersSnap.forEach(uDoc => {
+                if (uDoc.id !== currentUser.uid) {
+                    const uData = uDoc.data();
+                    // Admin sieht alle, User sieht nur Admin/System (oder alle, je nach Wunsch)
+                    const chatId = [currentUser.uid, uDoc.id].sort().join('__');
+                    const item = createContactItem(chatId, uData.name, 'Privater Chat');
+                    list.appendChild(item);
+                }
+            });
+        }
 
-                snap.forEach(d => {
-                    const m = d.data();
-                    const isAdmin = currentUser.email === 'julianknuhr92@gmail.com';
+        function createContactItem(id, name, sub) {
+            const div = document.createElement('div');
+            div.className = 'contact-item';
+            div.onclick = () => openChat(id, name);
+            div.innerHTML = `
+                    <div class="avatar">${name.charAt(0).toUpperCase()}</div>
+                    <div style="flex:1">
+                        <div style="font-weight:bold">${name}</div>
+                        <div style="font-size:12px; opacity:0.5">${sub}</div>
+                    </div>
+                `;
+            return div;
+        }
 
-                    // Filter: Admin sieht alles, User sieht nur seinen Chat mit Admin/System
-                    const isRelevant = isAdmin || (m.senderUid === currentUser.uid || m.receiverUid === currentUser.uid);
+        function openChat(chatId, name) {
+            activeChatId = chatId;
+            document.getElementById('input-area').style.display = 'flex';
+            if (unsubMessages) unsubMessages();
 
-                    if (isRelevant) {
+            const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
+            unsubMessages = onSnapshot(q, (snap) => {
+                const container = document.getElementById('messages-container');
+                container.innerHTML = '';
+                let lastDate = '';
+
+                snap.forEach(mDoc => {
+                    const m = mDoc.data();
+                    if (!m.createdAt) return;
+
+                    // Datums-Trenner
+                    const date = m.createdAt.toDate().toLocaleDateString();
+                    if (date !== lastDate) {
                         const div = document.createElement('div');
-                        div.className = `msg ${m.senderUid === currentUser.uid ? 'sent' : 'received'}`;
-
-                        if (m.type === 'text') div.textContent = m.text;
-                        else if (m.type === 'image') div.innerHTML = `<img src="${m.url}"><br>${m.text || ''}`;
-                        else if (m.type === 'file') div.innerHTML = `<a href="${m.url}" target="_blank" style="color:white">📎 ${m.fileName}</a>`;
-
-                        const time = m.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        div.innerHTML += `<span class="msg-info">${m.senderName} • ${time}</span>`;
-
-                        area.appendChild(div);
+                        div.className = 'date-divider';
+                        div.innerHTML = `<span>${date}</span>`;
+                        container.appendChild(div);
+                        lastDate = date;
                     }
+
+                    const isOwn = m.senderUid === currentUser.uid;
+                    const row = document.createElement('div');
+                    row.className = `msg-row ${isOwn ? 'own' : ''}`;
+                    const time = m.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                    row.innerHTML = `
+                            <div class="bubble">
+                                ${!isOwn ? `<div style="font-size:11px; color:#53bdeb; font-weight:bold; margin-bottom:4px">${m.senderName}</div>` : ''}
+                                <div>${m.text}</div>
+                                <div class="msg-meta">
+                                    <span>${time}</span>
+                                    ${isOwn ? '<span style="color:#53bdeb">✓✓</span>' : ''}
+                                </div>
+                            </div>
+                        `;
+                    container.appendChild(row);
                 });
-                area.scrollTop = area.scrollHeight;
+                container.scrollTop = container.scrollHeight;
             });
         }
 
         window.sendMessage = async () => {
             const input = document.getElementById('msg-input');
             const text = input.value.trim();
-            if (!text) return;
+            if (!text || !activeChatId) return;
 
-            await addDoc(collection(db, "messages"), {
-                senderUid: currentUser.uid,
-                senderName: document.getElementById('user-display').textContent.split(' ')[0],
-                receiverUid: activeChatPartner,
+            await addDoc(collection(db, "chats", activeChatId, "messages"), {
                 text: text,
-                type: 'text',
-                timestamp: new Date()
+                senderUid: currentUser.uid,
+                senderName: document.getElementById('user-display').textContent,
+                createdAt: serverTimestamp()
             });
             input.value = '';
+            input.style.height = 'auto';
         };
 
-        window.handleFileUpload = async (file, type) => {
-            if (!file) return;
-            const fileRef = ref(storage, `chats/${Date.now()}_${file.name}`);
-            const snapshot = await uploadBytes(fileRef, file);
-            const url = await getDownloadURL(snapshot.ref);
-
-            await addDoc(collection(db, "messages"), {
-                senderUid: currentUser.uid,
-                senderName: document.getElementById('user-display').textContent.split(' ')[0],
-                receiverUid: activeChatPartner,
-                url: url,
-                fileName: file.name,
-                type: type,
-                timestamp: new Date()
-            });
-        };
-
-        document.getElementById('logout-btn').onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
+        window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
     </script>
 </body>
 </html>

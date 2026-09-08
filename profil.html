@@ -2,28 +2,49 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Profil – SpickerSeite</title>
+    <title>Profil – Spicker Informatik</title>
     <style>
+        :root {
+            --primary-blue: #1b4f72;
+            --navbar-bg: rgba(255, 255, 255, 0.1);
+            --gold: #f1c40f;
+        }
+
         body {
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1b4f72;
+            background: var(--primary-blue);
             color: white;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
+        /* --- EINHEITLICHE NAVBAR (MASTER DESIGN) --- */
         .navbar {
-            background: rgba(255,255,255,0.1);
+            background: var(--navbar-bg);
             backdrop-filter: blur(15px);
-            padding: 15px 40px;
+            -webkit-backdrop-filter: blur(15px);
+            padding: 0 40px;
+            height: 70px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .nav-brand {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: white;
         }
 
         .nav-links {
             display: flex;
+            align-items: center;
             gap: 25px;
         }
 
@@ -33,16 +54,42 @@
                 font-weight: 500;
                 opacity: 0.8;
                 transition: 0.3s;
+                font-size: 0.95rem;
+                white-space: nowrap;
             }
 
                 .nav-links a:hover {
                     opacity: 1;
                 }
 
+        .user-link {
+            text-decoration: none;
+            transition: 0.3s;
+            margin-left: 10px;
+        }
+
+            .user-link .user-display {
+                opacity: 1;
+                text-decoration: underline;
+                font-size: 0.9rem;
+                color: white;
+                font-weight: bold;
+            }
+
+        .logout-btn {
+            opacity: 0.5;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* --- CONTENT BEREICH --- */
         .container {
             max-width: 600px;
-            margin: 50px auto;
+            margin: 40px auto;
             padding: 20px;
+            flex: 1;
         }
 
         .card {
@@ -54,17 +101,18 @@
             position: relative;
         }
 
-        /* Punktestand Badge */
-        .points-badge {
-            background: #f1c40f;
+        /* Gold-Badge mit BTC Symbol */
+        .gold-badge {
+            background: linear-gradient(135deg, #f1c40f, #f39c12);
             color: #1b4f72;
-            padding: 10px 20px;
+            padding: 12px 25px;
             border-radius: 50px;
-            font-weight: bold;
-            font-size: 1.2rem;
+            font-weight: 800;
+            font-size: 1.4rem;
             display: inline-block;
             margin-top: 10px;
-            box-shadow: 0 4px 15px rgba(241, 196, 15, 0.3);
+            box-shadow: 0 4px 20px rgba(241, 196, 15, 0.4);
+            border: 2px solid rgba(255,255,255,0.3);
         }
 
         h2 {
@@ -113,27 +161,35 @@
             .btn-save:hover {
                 background: #2ecc71;
             }
+
+        .btn-chat-link {
+            background: #3498db;
+            color: white;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <div style="font-weight: bold; font-size: 1.2rem;">🎓 Profil-Einstellungen</div>
-        <div class="nav-links">
+        <div class="nav-brand">🎓 Spicker Informatik</div>
+        <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
-            <a href="chat.html">Nachrichten 💬</a>
-            <a href="profil.html" style="border-bottom: 2px solid white;">Profil</a>
-            <a href="#" id="logout-link">Abmelden</a>
+            <a href="chat.html">Chat 💬</a>
+            <a href="profil.html" id="user-link-wrapper" class="user-link">
+                <span id="user-display" class="user-display">Lade...</span>
+            </a>
+            <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
         </div>
     </nav>
 
     <div class="container">
-        <!-- PUNKTESTAND -->
-        <div class="card" style="text-align: center; border: 2px solid #f1c40f;">
-            <h2>Dein Punktestand</h2>
-            <div id="user-points" class="points-badge">0 Punkte</div>
-            <button class="btn" style="margin-top:15px; background:#3498db; color:white;" onclick="location.href='chat.html'">Zum Chat & Benachrichtigungen</button>
-            <p style="font-size: 0.8rem; margin-top: 15px; opacity: 0.7;">Lade Klausuren hoch, um Punkte zu verdienen!</p>
+        <!-- GOLD-BESTAND -->
+        <div class="card" style="text-align: center; border: 2px solid var(--gold);">
+            <h2 style="color: var(--gold);">🪙 Dein Goldbestand</h2>
+            <div id="user-gold" class="gold-badge">₿ 0 Gold</div>
+            <button class="btn btn-chat-link" onclick="location.href='chat.html'">Zum Chat & Benachrichtigungen</button>
+            <p style="font-size: 0.8rem; margin-top: 15px; opacity: 0.7;">Lade Klausuren hoch, um wertvolles Gold zu verdienen!</p>
         </div>
 
         <!-- NAME ÄNDERN -->
@@ -185,12 +241,36 @@
             if (!user) { window.location.href = 'login.html'; return; }
             currentUser = user;
 
-            // Live-Update für Name und Punkte
             onSnapshot(doc(db, "users", user.uid), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
+                    document.getElementById('user-display').textContent = data.name;
                     document.getElementById('display-name').value = data.name || "";
-                    document.getElementById('user-points').textContent = (data.points || 0) + " Punkte";
+
+                    // Anzeige von Gold mit BTC Symbol
+                    document.getElementById('user-gold').textContent = "₿ " + (data.points || 0) + " Gold";
+
+                    // DYNAMISCHE NAVBAR
+                    const navContainer = document.getElementById('nav-links-container');
+                    const userLink = document.getElementById('user-link-wrapper');
+                    navContainer.querySelectorAll('.dynamic-link').forEach(el => el.remove());
+
+                    if (!data.isAdmin) {
+                        const helpA = document.createElement('a');
+                        helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                        helpA.className = 'dynamic-link';
+                        navContainer.insertBefore(helpA, userLink);
+                    } else {
+                        const adminA = document.createElement('a');
+                        adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                        adminA.className = 'dynamic-link';
+                        navContainer.insertBefore(adminA, userLink);
+                    }
+
+                    const profA = document.createElement('a');
+                    profA.href = 'prof.html'; profA.textContent = 'Professoren';
+                    profA.className = 'dynamic-link';
+                    navContainer.insertBefore(profA, userLink);
                 }
             });
         });
@@ -199,7 +279,7 @@
             const newName = document.getElementById('display-name').value.trim();
             if (!newName) return alert("Bitte Namen eingeben.");
             await updateDoc(doc(db, "users", currentUser.uid), { name: newName });
-            alert("Gespeichert!");
+            alert("Name gespeichert!");
         };
 
         window.updateUserPassword = async () => {
@@ -212,7 +292,7 @@
             } catch (e) { alert("Fehler: " + e.message); }
         };
 
-        document.getElementById('logout-link').onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
+        window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
     </script>
 </body>
 </html>

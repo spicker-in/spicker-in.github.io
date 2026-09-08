@@ -2,11 +2,11 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Admin – SpickerSeite</title>
+    <title>Admin – Spicker Informatik</title>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, addDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, addDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -22,54 +22,86 @@
         const db = getFirestore(app);
 
         window._db = db; window._auth = auth;
-        window._fns = { collection, onSnapshot, doc, updateDoc, deleteDoc, signOut, query, orderBy, addDoc, increment };
+        window._fns = { collection, onSnapshot, doc, updateDoc, deleteDoc, signOut, query, orderBy, addDoc, increment, getDoc };
         document.dispatchEvent(new Event('fbReady'));
     </script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; background: #1b4f72; color: white; padding: 15px 40px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .nav-links { display: flex; gap: 20px; align-items: center; }
-        .nav-links a { color: white; text-decoration: none; font-weight: bold; opacity: 0.8; transition: 0.3s; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 0; }
+        
+        /* EINHEITLICHE NAVBAR */
+        .navbar {
+            background: #1b4f72;
+            padding: 0 40px;
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-sizing: border-box;
+            color: white;
+        }
+        .nav-brand { font-weight: bold; font-size: 1.2rem; }
+        .nav-links { display: flex; align-items: center; gap: 25px; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 500; opacity: 0.8; transition: 0.3s; font-size: 0.95rem; }
         .nav-links a:hover { opacity: 1; }
+        .user-link { text-decoration: none; transition: 0.3s; margin-left: 10px; }
+        .user-link:hover .user-display { opacity: 1; text-decoration: underline; }
+        .user-display { opacity: 0.7; font-size: 0.9rem; color: white; font-weight: bold; }
+        .logout-btn { opacity: 0.5; font-size: 0.9rem; cursor: pointer; color: white; text-decoration: none; }
+
+        .container { padding: 20px; max-width: 1200px; margin: 0 auto; }
         .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
         .btn { padding: 6px 12px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; font-size: 11px; color: white; }
-        .btn-approve { background: #2ecc71; }
         .btn-points { background: #f1c40f; color: #333; }
-        .btn-chat { background: #3498db; }
         .btn-delete { background: #e74c3c; }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div style="font-weight: bold; font-size: 1.2rem;">🛠 Adminpanel</div>
-        <div class="nav-links">
+        <div class="nav-brand">🛠 Adminpanel</div>
+        <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html">Chat 💬</a>
-            <a href="profil.html">Profil</a>
+            <!-- Admin Link (Aktiv) -->
             <a href="admin.html" style="border-bottom: 2px solid white;">Admin</a>
-            <a href="fach.html">Fächer</a>
             <a href="prof.html">Professoren</a>
-            <a href="#" onclick="window._fns.signOut(window._auth).then(()=>location.href='login.html')" style="opacity: 0.6;">Abmelden</a>
+            
+            <a href="profil.html" id="user-link-wrapper" class="user-link">
+                <span id="user-display" class="user-display">Lade...</span>
+            </a>
+            <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
         </div>
     </nav>
 
-    <div class="card">
-        <h3>👥 Benutzer & Punkte</h3>
-        <table>
-            <thead>
-                <tr><th>Name</th><th>E-Mail</th><th>Punkte</th><th>Aktion</th></tr>
-            </thead>
-            <tbody id="user-list"></tbody>
-        </table>
+    <div class="container">
+        <div class="card">
+            <h3>👥 Benutzer & Punkte</h3>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>E-Mail</th><th>Punkte</th><th>Aktion</th></tr>
+                </thead>
+                <tbody id="user-list"></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
         const SUPERADMIN = 'julianknuhr92@gmail.com';
         document.addEventListener('fbReady', () => {
-            window._auth.onAuthStateChanged(user => {
-                if (!user || user.email.toLowerCase() !== SUPERADMIN) window.location.href = 'login.html';
+            window._auth.onAuthStateChanged(async (user) => {
+                if (!user) { window.location.href = 'login.html'; return; }
+                
+                const snap = await window._fns.getDoc(window._fns.doc(window._db, "users", user.uid));
+                const data = snap.data();
+                document.getElementById('user-display').textContent = data.name;
+
+                if (user.email.toLowerCase() !== SUPERADMIN) {
+                    window.location.href = 'start.html';
+                }
+
                 window._fns.onSnapshot(window._fns.collection(window._db, "users"), (snap) => {
                     const list = document.getElementById('user-list');
                     list.innerHTML = '';
@@ -83,7 +115,6 @@
                             <td><b>${u.points || 0}</b></td>
                             <td>
                                 <button class="btn btn-points" onclick="givePoints('${d.id}', '${u.name}')">Punkte geben</button>
-                                <button class="btn btn-chat" onclick="location.href='chat.html?uid=${d.id}'">Chat öffnen</button>
                                 <button class="btn btn-delete" onclick="deleteUser('${d.id}')">Löschen</button>
                             </td>
                         `;
@@ -98,13 +129,10 @@
             if (!pts || isNaN(pts)) return;
             const points = parseInt(pts);
             await window._fns.updateDoc(window._fns.doc(window._db, "users", userUid), { points: window._fns.increment(points) });
-            await window._fns.addDoc(window._fns.collection(window._db, "messages"), {
-                senderUid: 'system', senderName: 'System', receiverUid: userUid,
-                text: `🎉 Glückwunsch! Du hast ${points} Punkte bekommen.`,
-                timestamp: new Date(), type: 'text'
-            });
             alert("Punkte vergeben!");
         };
+
+        window.logout = () => window._fns.signOut(window._auth).then(() => window.location.href = 'login.html');
         async function deleteUser(id) { if(confirm("Löschen?")) await window._fns.deleteDoc(window._fns.doc(window._db, "users", id)); }
     </script>
 </body>

@@ -2,301 +2,343 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Passwort zurücksetzen – SpickerSeite</title>
+    <title>Professoren – Spicker Informatik</title>
     <style>
-        * {
-            box-sizing: border-box;
+        :root {
+            --primary-blue: #1b4f72;
+            --navbar-bg: rgba(255, 255, 255, 0.1);
         }
 
         body {
             margin: 0;
-            padding: 20px;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-            background: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
-            background-size: cover;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-blue);
+            color: white;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
+        }
+
+        /* --- NAVBAR (MASTER DESIGN) --- */
+        .navbar {
+            background: var(--navbar-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 0 40px;
+            height: 70px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-sizing: border-box;
         }
 
-        .card {
-            background: rgba(255, 255, 255, 0.12);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 28px;
-            padding: 35px 30px;
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-            color: white;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        }
-
-        h1 {
-            font-size: 26px;
-            margin: 0 0 10px 0;
-            font-weight: 700;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        p.subtitle {
-            font-size: 14px;
-            opacity: 0.85;
-            margin-bottom: 25px;
-            line-height: 1.4;
-        }
-
-        .input-group {
-            position: relative;
-            margin-bottom: 14px;
-            text-align: left;
-        }
-
-        input {
-            width: 100%;
-            padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 12px;
-            color: #1a252f;
-            font-size: 15px;
-            outline: none;
-            padding-right: 42px;
-        }
-
-            input:focus {
-                background: #fff;
-                border-color: #5dade2;
-                box-shadow: 0 0 0 3px rgba(93, 173, 226, 0.35);
-            }
-
-        .toggle-pw-btn {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            color: #555;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #7fb3d5, #2980b9);
-            border: none;
-            border-radius: 50px;
-            color: white;
+        .nav-brand {
             font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: transform 0.2s;
+            font-size: 1.2rem;
         }
 
-            .btn-submit:hover {
-                transform: translateY(-2px);
-            }
-
-            .btn-submit:disabled {
-                opacity: 0.6;
-                cursor: not-allowed;
-                transform: none;
-            }
-
-        .msg-box {
-            padding: 12px 14px;
-            border-radius: 12px;
-            font-size: 13px;
-            margin-bottom: 15px;
-            display: none;
-            text-align: left;
-            line-height: 1.4;
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 25px;
         }
 
-            .msg-box.error {
-                background: rgba(231, 76, 60, 0.9);
+            .nav-links a {
                 color: white;
-                display: block;
+                text-decoration: none;
+                font-weight: 500;
+                opacity: 0.8;
+                transition: 0.3s;
+                font-size: 0.95rem;
             }
 
-            .msg-box.success {
-                background: rgba(46, 204, 113, 0.9);
-                color: white;
-                display: block;
-            }
+                .nav-links a:hover {
+                    opacity: 1;
+                }
 
-        .spinner {
-            width: 38px;
-            height: 38px;
-            border: 4px solid rgba(255, 255, 255, 0.25);
-            border-top: 4px solid #ffffff;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 15px auto;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .login-link-btn {
-            display: inline-block;
-            margin-top: 20px;
-            color: #aed6f1;
+        .user-link {
             text-decoration: none;
-            font-weight: bold;
-            font-size: 14px;
+            transition: 0.3s;
+            margin-left: 10px;
         }
 
-            .login-link-btn:hover {
+            .user-link:hover .user-display {
+                opacity: 1;
                 text-decoration: underline;
             }
+
+        .user-display {
+            opacity: 0.7;
+            font-size: 0.9rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logout-btn {
+            opacity: 0.5;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: white;
+            text-decoration: none;
+        }
+
+        /* --- CONTENT --- */
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+            flex: 1;
+        }
+
+        .admin-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px dashed rgba(255,255,255,0.3);
+            margin-bottom: 40px;
+            display: none;
+        }
+
+        .prof-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .prof-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .prof-img {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #f1c40f;
+            margin-bottom: 15px;
+        }
+
+        /* Beiträge / Anekdoten */
+        .entries-container {
+            margin-top: 20px;
+            text-align: left;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .entry {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .entry-user {
+            font-size: 0.75rem;
+            color: #f1c40f;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .entry-text {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .entry-img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        /* Input Felder */
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+
+        .btn-action {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>🔑 Neues Passwort</h1>
+    <nav class="navbar">
+        <div class="nav-brand">🎓 Professoren-Verzeichnis</div>
+        <div class="nav-links" id="nav-links-container">
+            <a href="start.html">Start</a>
+            <a href="chat.html">Chat 💬</a>
+            <a href="prof.html" style="border-bottom: 2px solid white;">Professoren</a>
+            <a href="profil.html" id="user-link-wrapper" class="user-link">
+                <span id="user-display" class="user-display">Lade...</span>
+            </a>
+            <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
+        </div>
+    </nav>
 
-        <p class="subtitle" id="user-info-text">Code wird überprüft...</p>
-
-        <div id="loader-box">
-            <div class="spinner"></div>
+    <div class="container">
+        <!-- ADMIN: PROF HINZUFÜGEN -->
+        <div id="admin-prof-add" class="admin-section">
+            <h3>👨‍🏫 Neuen Professor hinzufügen (Admin)</h3>
+            <input type="text" id="new-prof-name" placeholder="Name des Professors">
+            <label style="display:block; margin-top:10px; font-size: 0.8rem;">Profilbild wählen:</label>
+            <input type="file" id="new-prof-photo" accept="image/*">
+            <button class="btn-action" onclick="addProfessor()">Professor speichern</button>
         </div>
 
-        <div id="status-box" class="msg-box"></div>
-
-        <form id="reset-form" style="display: none;" onsubmit="handlePasswordReset(event)">
-            <div class="input-group">
-                <input type="password" id="new-password" placeholder="Neues Passwort (mind. 6 Zeichen)" required minlength="6" autocomplete="new-password">
-                <button type="button" class="toggle-pw-btn" onclick="togglePassword('new-password', this)">👁️</button>
-            </div>
-            <div class="input-group">
-                <input type="password" id="confirm-password" placeholder="Neues Passwort wiederholen" required minlength="6" autocomplete="new-password">
-                <button type="button" class="toggle-pw-btn" onclick="togglePassword('confirm-password', this)">👁️</button>
-            </div>
-            <button type="submit" class="btn-submit" id="btn-save">Passwort speichern</button>
-        </form>
-
-        <a href="login.html" class="login-link-btn" id="back-to-login" style="display: none;">← Zum Login</a>
+        <h1>Unsere Professoren</h1>
+        <div class="prof-grid" id="prof-grid">
+            <!-- Profs werden hier geladen -->
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import {
-            getAuth,
-            verifyPasswordResetCode,
-            confirmPasswordReset
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
-            authDomain: "spickersite.firebaseapp.com",
-            projectId: "spickersite",
-            storageBucket: "spickersite.firebasestorage.app",
-            messagingSenderId: "515794720428",
-            appId: "1:515794720428:web:f509322fe888fb3c8a3109"
-        };
-
+        const firebaseConfig = { /* Deine Config */ };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
 
-        // Code (oobCode) aus der URL auslesen
-        const urlParams = new URLSearchParams(window.location.search);
-        const actionCode = urlParams.get('oobCode');
+        let currentUserData = null;
 
-        const loaderBox = document.getElementById('loader-box');
-        const resetForm = document.getElementById('reset-form');
-        const infoText = document.getElementById('user-info-text');
-        const statusBox = document.getElementById('status-box');
-        const backToLogin = document.getElementById('back-to-login');
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'login.html'; return; }
+            const snap = await getDoc(doc(db, "users", user.uid));
+            currentUserData = snap.data();
+            document.getElementById('user-display').textContent = currentUserData.name;
 
-        let userEmail = '';
-
-        async function checkCode() {
-            if (!actionCode) {
-                loaderBox.style.display = 'none';
-                showError("Ungültiger oder fehlender Link. Bitte fordere einen neuen Reset-Link an.");
-                backToLogin.style.display = 'inline-block';
-                return;
+            // Dynamische Navbar Logik
+            const navContainer = document.getElementById('nav-links-container');
+            const userLink = document.getElementById('user-link-wrapper');
+            if (currentUserData.isAdmin) {
+                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                navContainer.insertBefore(adminA, userLink);
+                document.getElementById('admin-prof-add').style.display = 'block';
+            } else {
+                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userLink);
             }
 
-            try {
-                userEmail = await verifyPasswordResetCode(auth, actionCode);
-                loaderBox.style.display = 'none';
-                infoText.textContent = `Neues Passwort für ${userEmail} eingeben:`;
-                resetForm.style.display = 'block';
-            } catch (err) {
-                loaderBox.style.display = 'none';
-                infoText.textContent = "Ungültiger Link";
-                showError("Dieser Link ist abgelaufen oder wurde bereits verwendet. Bitte fordere auf der Login-Seite einen neuen Link an.");
-                backToLogin.style.display = 'inline-block';
-            }
-        }
+            loadProfessors();
+        });
 
-        window.togglePassword = (fieldId, btn) => {
-            const input = document.getElementById(fieldId);
-            input.type = input.type === 'password' ? 'text' : 'password';
-            btn.textContent = input.type === 'password' ? '👁️' : '🔒';
+        // PROFESSOR HINZUFÜGEN (Admin)
+        window.addProfessor = async () => {
+            const name = document.getElementById('new-prof-name').value.trim();
+            const file = document.getElementById('new-prof-photo').files[0];
+            if (!name || !file) return alert("Name und Bild werden benötigt!");
+
+            const sRef = ref(storage, `profs/${Date.now()}_${file.name}`);
+            const snap = await uploadBytes(sRef, file);
+            const url = await getDownloadURL(snap.ref);
+
+            await addDoc(collection(db, "professors"), {
+                name: name,
+                photoUrl: url,
+                createdAt: serverTimestamp()
+            });
+            alert("Professor hinzugefügt!");
+            location.reload();
         };
 
-        function showError(msg) {
-            statusBox.innerHTML = msg;
-            statusBox.className = 'msg-box error';
+        // PROFESSOREN LADEN
+        function loadProfessors() {
+            onSnapshot(collection(db, "professors"), (snapshot) => {
+                const grid = document.getElementById('prof-grid');
+                grid.innerHTML = '';
+                snapshot.forEach(d => {
+                    const prof = d.data();
+                    const card = document.createElement('div');
+                    card.className = 'prof-card';
+                    card.innerHTML = `
+                            <img src="${prof.photoUrl}" class="prof-img">
+                            <h2>${prof.name}</h2>
+                            <div class="entries-container" id="entries-${d.id}">Lade Beiträge...</div>
+                            <textarea id="input-text-${d.id}" placeholder="Anekdote oder Info schreiben..."></textarea>
+                            <input type="file" id="input-file-${d.id}" accept="image/*">
+                            <button class="btn-action" onclick="addEntry('${d.id}')">Beitrag posten</button>
+                        `;
+                    grid.appendChild(card);
+                    loadEntries(d.id);
+                });
+            });
         }
 
-        function showSuccess(msg) {
-            statusBox.innerHTML = msg;
-            statusBox.className = 'msg-box success';
+        // BEITRÄGE LADEN
+        function loadEntries(profId) {
+            const q = query(collection(db, "prof_entries"), where("profId", "==", profId), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snap) => {
+                const container = document.getElementById(`entries-${profId}`);
+                container.innerHTML = snap.empty ? '<p style="opacity:0.5; font-size:0.8rem;">Noch keine Beiträge.</p>' : '';
+                snap.forEach(docEntry => {
+                    const e = docEntry.data();
+                    const div = document.createElement('div');
+                    div.className = 'entry';
+                    // Admin Logik: Name weglassen
+                    const nameLabel = e.isAdminEntry ? '' : `<div class="entry-user">${e.userName}</div>`;
+                    div.innerHTML = `
+                            ${nameLabel}
+                            <div class="entry-text">${e.text}</div>
+                            ${e.photoUrl ? `<img src="${e.photoUrl}" class="entry-img">` : ''}
+                        `;
+                    container.appendChild(div);
+                });
+            });
         }
 
-        window.handlePasswordReset = async (e) => {
-            e.preventDefault();
-            const p1 = document.getElementById('new-password').value;
-            const p2 = document.getElementById('confirm-password').value;
-            const btn = document.getElementById('btn-save');
+        // NEUEN BEITRAG POSTEN
+        window.addEntry = async (profId) => {
+            const text = document.getElementById(`input-text-${profId}`).value.trim();
+            const file = document.getElementById(`input-file-${profId}`).files[0];
+            if (!text && !file) return;
 
-            if (p1.length < 6) {
-                showError("Das Passwort muss mindestens 6 Zeichen lang sein.");
-                return;
+            let photoUrl = null;
+            if (file) {
+                const sRef = ref(storage, `prof_entries/${Date.now()}_${file.name}`);
+                const snap = await uploadBytes(sRef, file);
+                photoUrl = await getDownloadURL(snap.ref);
             }
 
-            if (p1 !== p2) {
-                showError("Die Passwörter stimmen nicht überein!");
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = 'Wird gespeichert...';
-
-            try {
-                await confirmPasswordReset(auth, actionCode, p1);
-                resetForm.style.display = 'none';
-                infoText.style.display = 'none';
-                showSuccess("🎉 <strong>Passwort erfolgreich geändert!</strong><br>Du wirst in 3 Sekunden zum Login weitergeleitet...");
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 3000);
-            } catch (err) {
-                btn.disabled = false;
-                btn.textContent = 'Passwort speichern';
-                showError("Fehler beim Zurücksetzen: " + err.message);
-            }
+            await addDoc(collection(db, "prof_entries"), {
+                profId: profId,
+                text: text,
+                photoUrl: photoUrl,
+                userName: currentUserData.name,
+                userUid: auth.currentUser.uid,
+                isAdminEntry: currentUserData.isAdmin || false, // Merken ob Admin
+                createdAt: serverTimestamp()
+            });
+            document.getElementById(`input-text-${profId}`).value = '';
+            document.getElementById(`input-file-${profId}`).value = '';
         };
 
-        checkCode();
+        window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
     </script>
 </body>
 </html>

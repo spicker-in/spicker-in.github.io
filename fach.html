@@ -2,9 +2,12 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fachdetails – SpickerSeite</title>
+    <title>Fachdetails – Spicker Informatik</title>
     <style>
+        :root {
+            --primary-blue: #1b4f72;
+        }
+
         body {
             margin: 0;
             font-family: 'Segoe UI', sans-serif;
@@ -14,27 +17,66 @@
             min-height: 100vh;
         }
 
+        /* EINHEITLICHE NAVBAR */
         .navbar {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
-            padding: 15px 40px;
+            padding: 0 40px;
+            height: 70px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000;
+            box-sizing: border-box;
         }
 
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin-left: 20px;
+        .nav-brand {
             font-weight: bold;
-            cursor: pointer;
+            font-size: 1.2rem;
         }
 
-        .admin-btn {
-            display: none;
-            color: #ffeb3b !important;
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+            .nav-links a {
+                color: white;
+                text-decoration: none;
+                font-weight: 500;
+                opacity: 0.8;
+                transition: 0.3s;
+                font-size: 0.95rem;
+            }
+
+                .nav-links a:hover {
+                    opacity: 1;
+                }
+
+        .user-link {
+            text-decoration: none;
+            transition: 0.3s;
+            margin-left: 10px;
+        }
+
+            .user-link:hover .user-display {
+                opacity: 1;
+                text-decoration: underline;
+            }
+
+        .user-display {
+            opacity: 0.7;
+            font-size: 0.9rem;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logout-btn {
+            opacity: 0.5;
+            font-size: 0.9rem;
+            cursor: pointer;
         }
 
         .container {
@@ -49,12 +91,6 @@
             border-radius: 30px;
             padding: 40px;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
         }
 
         .exam-item {
@@ -67,26 +103,14 @@
             align-items: center;
         }
 
-        .btn-download {
-            background: #2ecc71;
-            color: white;
-            text-decoration: none;
-            padding: 8px 15px;
-            border-radius: 10px;
-            font-weight: bold;
+        .status-badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 5px;
+            background: #f39c12;
+            margin-left: 10px;
         }
 
-        .btn-delete {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 10px;
-            cursor: pointer;
-            display: none;
-        }
-
-        /* UPLOAD BOX IN FACH.HTML */
         .upload-box {
             margin-top: 40px;
             padding-top: 20px;
@@ -94,8 +118,16 @@
             text-align: center;
         }
 
+        .upload-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
         .btn-upload {
-            background: linear-gradient(135deg, #5dade2, #2e86c1);
+            background: #2ecc71;
             color: white;
             border: none;
             padding: 10px 25px;
@@ -103,30 +135,48 @@
             font-weight: bold;
             cursor: pointer;
         }
+
+        .camera-icon {
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: 0.2s;
+        }
+
+            .camera-icon:hover {
+                opacity: 1;
+                transform: scale(1.1);
+            }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div style="font-size: 20px; font-weight: bold;">🎓 Informatik</div>
-        <div class="nav-links">
-            <span id="user-name">...</span>
-            <a href="start.html" style="color: #5dade2;">🏠 Startseite</a>
-            <a href="admin.html" class="admin-btn" id="admin-link">🛠 Admin</a>
-            <a onclick="logout()">Abmelden</a>
+        <div class="nav-brand">🎓 Fachdetails</div>
+        <div class="nav-links" id="nav-links-container">
+            <a href="start.html">Start</a>
+            <a href="chat.html">Chat 💬</a>
+            <a href="profil.html" id="user-link-wrapper" class="user-link">
+                <span id="user-display" class="user-display">Lade...</span>
+            </a>
+            <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
         </div>
     </nav>
 
     <div class="container">
         <div class="glass-card">
-            <h1 id="subject-name">Lade Fach...</h1>
+            <h1 id="subject-name" style="text-align:center">Lade Fach...</h1>
             <div id="exam-list"></div>
 
-            <!-- Upload Bereich hierher verschoben -->
             <div class="upload-box">
-                <h3>Altklausur für dieses Fach hochladen</h3>
-                <input type="file" id="upload-file" accept="application/pdf">
-                <button class="btn-upload" onclick="handleUpload()">Hochladen</button>
-                <p id="status"></p>
+                <h3>Altklausur hochladen</h3>
+                <div class="upload-controls">
+                    <input type="file" id="upload-file" hidden onchange="handleUpload(this.files[0])">
+                    <input type="file" id="camera-file" hidden accept="image/*" capture="environment" onchange="handleUpload(this.files[0])">
+
+                    <button class="btn-upload" onclick="document.getElementById('upload-file').click()">📎 Datei wählen</button>
+                    <span class="camera-icon" onclick="document.getElementById('camera-file').click()">📷</span>
+                </div>
+                <p id="status" style="margin-top:10px; font-size:14px;"></p>
             </div>
         </div>
     </div>
@@ -134,7 +184,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, deleteDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = { /* Deine Config */ };
@@ -149,12 +199,23 @@
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
             const userDoc = await getDoc(doc(db, "users", user.uid));
-            if (userDoc.exists()) {
-                const data = userDoc.data();
-                document.getElementById('user-name').textContent = data.name;
-                if (data.isAdmin) document.getElementById('admin-link').style.display = 'inline';
-                loadSubjectDetails(data.isAdmin);
+            const userData = userDoc.data();
+            document.getElementById('user-display').textContent = userData.name;
+
+            // NAVBAR LOGIK
+            const navContainer = document.getElementById('nav-links-container');
+            const userLink = document.getElementById('user-link-wrapper');
+            if (userData.isAdmin) {
+                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                navContainer.insertBefore(adminA, userLink);
+            } else {
+                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userLink);
             }
+            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
+            navContainer.insertBefore(profA, userLink);
+
+            loadSubjectDetails(userData.isAdmin);
         });
 
         async function loadSubjectDetails(isAdmin) {
@@ -164,41 +225,43 @@
             const q = query(collection(db, "exams"), where("subjectId", "==", subjectId));
             onSnapshot(q, (snapshot) => {
                 const list = document.getElementById('exam-list');
-                list.innerHTML = snapshot.empty ? '<p style="text-align:center; opacity:0.6;">Keine Klausuren vorhanden.</p>' : "";
+                list.innerHTML = "";
                 snapshot.forEach((d) => {
                     const exam = d.data();
-                    const item = document.createElement('div');
-                    item.className = 'exam-item';
-                    item.innerHTML = `<span>📄 ${exam.fileName}</span>
-                            <div><a href="${exam.url}" target="_blank" class="btn-download">Download</a>
-                            <button class="btn-delete" id="del-${d.id}" onclick="deleteExam('${d.id}')">Löschen</button></div>`;
-                    list.appendChild(item);
-                    if (isAdmin) document.getElementById(`del-${d.id}`).style.display = 'inline-block';
+                    // Nur anzeigen wenn freigegeben ODER wenn man Admin ist
+                    if (exam.status === 'approved' || isAdmin) {
+                        const item = document.createElement('div');
+                        item.className = 'exam-item';
+                        item.innerHTML = `
+                                <span>📄 ${exam.fileName} ${exam.status === 'pending' ? '<span class="status-badge">Wartet auf Freigabe</span>' : ''}</span>
+                                <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Download</a>
+                            `;
+                        list.appendChild(item);
+                    }
                 });
             });
         }
 
-        window.handleUpload = async () => {
-            const file = document.getElementById('upload-file').files[0];
+        window.handleUpload = async (file) => {
+            if (!file || !subjectId) return;
             const status = document.getElementById('status');
-            if (!file || !subjectId) return alert("Datei auswählen!");
+            status.textContent = "Wird hochgeladen...";
 
-            status.textContent = "Upload läuft...";
             try {
                 const sRef = ref(storage, `exams/${subjectId}/${Date.now()}_${file.name}`);
                 const snap = await uploadBytes(sRef, file);
                 const url = await getDownloadURL(snap.ref);
-                await addDoc(collection(db, "exams"), {
-                    subjectId: subjectId, fileName: file.name, url: url,
-                    uploadedBy: auth.currentUser.uid, createdAt: serverTimestamp()
-                });
-                status.textContent = "Erfolg!";
-                document.getElementById('upload-file').value = "";
-            } catch (e) { status.textContent = "Fehler beim Upload."; }
-        };
 
-        window.deleteExam = async (id) => {
-            if (confirm("Löschen?")) await deleteDoc(doc(db, "exams", id));
+                await addDoc(collection(db, "exams"), {
+                    subjectId: subjectId,
+                    fileName: file.name,
+                    url: url,
+                    status: 'pending', // WICHTIG: Erstmal auf Warteliste
+                    uploadedBy: auth.currentUser.uid,
+                    createdAt: serverTimestamp()
+                });
+                status.textContent = "Erfolgreich! Wartet auf Admin-Freigabe.";
+            } catch (e) { status.textContent = "Fehler beim Upload."; }
         };
 
         window.logout = () => signOut(auth).then(() => location.href = 'login.html');
