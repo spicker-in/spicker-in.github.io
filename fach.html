@@ -15,9 +15,11 @@
             background-size: cover;
             color: white;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* EINHEITLICHE NAVBAR */
+        /* NAVBAR */
         .navbar {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
@@ -51,20 +53,11 @@
                 font-size: 0.95rem;
             }
 
-                .nav-links a:hover {
-                    opacity: 1;
-                }
-
         .user-link {
             text-decoration: none;
             transition: 0.3s;
             margin-left: 10px;
         }
-
-            .user-link:hover .user-display {
-                opacity: 1;
-                text-decoration: underline;
-            }
 
         .user-display {
             opacity: 0.7;
@@ -83,6 +76,7 @@
             max-width: 900px;
             margin: 40px auto;
             padding: 0 20px;
+            flex: 1;
         }
 
         .glass-card {
@@ -103,27 +97,22 @@
             align-items: center;
         }
 
-        .status-badge {
-            font-size: 10px;
-            padding: 3px 8px;
-            border-radius: 5px;
-            background: #f39c12;
+        .settings-icon {
+            cursor: pointer;
+            opacity: 0.5;
             margin-left: 10px;
         }
+
+            .settings-icon:hover {
+                opacity: 1;
+                color: #f39c12;
+            }
 
         .upload-box {
             margin-top: 40px;
             padding-top: 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
             text-align: center;
-        }
-
-        .upload-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 15px;
         }
 
         .btn-upload {
@@ -136,20 +125,39 @@
             cursor: pointer;
         }
 
-        .camera-icon {
-            font-size: 24px;
-            cursor: pointer;
-            opacity: 0.8;
-            transition: 0.2s;
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
         }
 
-            .camera-icon:hover {
-                opacity: 1;
-                transform: scale(1.1);
-            }
+        .modal-content {
+            background: #1b4f72;
+            margin: 5% auto;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            color: white;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+
     <nav class="navbar">
         <div class="nav-brand">🎓 Fachdetails</div>
         <div class="nav-links" id="nav-links-container">
@@ -169,14 +177,21 @@
 
             <div class="upload-box">
                 <h3>Altklausur hochladen</h3>
-                <div class="upload-controls">
-                    <input type="file" id="upload-file" hidden onchange="handleUpload(this.files[0])">
-                    <input type="file" id="camera-file" hidden accept="image/*" capture="environment" onchange="handleUpload(this.files[0])">
-
-                    <button class="btn-upload" onclick="document.getElementById('upload-file').click()">📎 Datei wählen</button>
-                    <span class="camera-icon" onclick="document.getElementById('camera-file').click()">📷</span>
-                </div>
+                <input type="file" id="upload-file" hidden onchange="handleUpload(this.files[0])">
+                <button class="btn-upload" onclick="document.getElementById('upload-file').click()">📎 Datei wählen</button>
                 <p id="status" style="margin-top:10px; font-size:14px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h2>Zugriff verwalten</h2>
+            <div id="user-list-container"></div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn" style="background:#7f8c8d; color:white; padding:10px;" onclick="closeModal()">Abbrechen</button>
+                <button id="save-access-btn" class="btn-upload" style="padding:10px;">Speichern</button>
             </div>
         </div>
     </div>
@@ -184,7 +199,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = { /* Deine Config */ };
@@ -195,14 +210,15 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const subjectId = urlParams.get('id');
+        let isAdminGlobal = false;
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
+            isAdminGlobal = userData.isAdmin;
             document.getElementById('user-display').textContent = userData.name;
 
-            // NAVBAR LOGIK
             const navContainer = document.getElementById('nav-links-container');
             const userLink = document.getElementById('user-link-wrapper');
             if (userData.isAdmin) {
@@ -215,26 +231,32 @@
             const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
             navContainer.insertBefore(profA, userLink);
 
-            loadSubjectDetails(userData.isAdmin);
+            loadSubjectDetails(user.email, userData.isAdmin);
         });
 
-        async function loadSubjectDetails(isAdmin) {
+        async function loadSubjectDetails(userEmail, isAdmin) {
             const sDoc = await getDoc(doc(db, "subjects", subjectId));
             if (sDoc.exists()) document.getElementById('subject-name').textContent = sDoc.data().name;
 
-            const q = query(collection(db, "exams"), where("subjectId", "==", subjectId));
-            onSnapshot(q, (snapshot) => {
+            onSnapshot(query(collection(db, "exams"), where("subjectId", "==", subjectId)), (snapshot) => {
                 const list = document.getElementById('exam-list');
                 list.innerHTML = "";
                 snapshot.forEach((d) => {
                     const exam = d.data();
-                    // Nur anzeigen wenn freigegeben ODER wenn man Admin ist
-                    if (exam.status === 'approved' || isAdmin) {
+                    const visibility = exam.visibility || 'alle';
+                    const allowedEmails = exam.allowedEmails || [];
+
+                    let hasAccess = isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()));
+
+                    if (hasAccess) {
                         const item = document.createElement('div');
                         item.className = 'exam-item';
                         item.innerHTML = `
-                                <span>📄 ${exam.fileName} ${exam.status === 'pending' ? '<span class="status-badge">Wartet auf Freigabe</span>' : ''}</span>
-                                <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Download</a>
+                                <span>📄 ${exam.fileName}</span>
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Download</a>
+                                    ${isAdmin ? `<span class="settings-icon" onclick="manageVisibility('exams', '${d.id}', '${exam.fileName}', '${visibility}', ${JSON.stringify(allowedEmails)})">⚙️</span>` : ''}
+                                </div>
                             `;
                         list.appendChild(item);
                     }
@@ -242,28 +264,49 @@
             });
         }
 
-        window.handleUpload = async (file) => {
-            if (!file || !subjectId) return;
-            const status = document.getElementById('status');
-            status.textContent = "Wird hochgeladen...";
+        window.manageVisibility = async (coll, id, name, currentVis, currentEmails) => {
+            const mode = prompt(`Sichtbarkeit für "${name}":\n1 = Alle\n2 = Nur Admins\n3 = Benutzerdefiniert`, "1");
+            if (!mode) return;
 
-            try {
-                const sRef = ref(storage, `exams/${subjectId}/${Date.now()}_${file.name}`);
-                const snap = await uploadBytes(sRef, file);
-                const url = await getDownloadURL(snap.ref);
+            if (mode === "1" || mode === "2") {
+                await updateDoc(doc(db, coll, id), { visibility: mode === "1" ? 'alle' : 'niemand', status: 'approved', allowedEmails: [] });
+                return;
+            }
 
-                await addDoc(collection(db, "exams"), {
-                    subjectId: subjectId,
-                    fileName: file.name,
-                    url: url,
-                    status: 'pending', // WICHTIG: Erstmal auf Warteliste
-                    uploadedBy: auth.currentUser.uid,
-                    createdAt: serverTimestamp()
+            if (mode === "3") {
+                const modal = document.getElementById('userModal');
+                const container = document.getElementById('user-list-container');
+                modal.style.display = 'block';
+                const usersSnap = await getDocs(collection(db, "users"));
+                container.innerHTML = '';
+                usersSnap.forEach(uDoc => {
+                    const u = uDoc.data();
+                    const email = u.email.toLowerCase();
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `<input type="checkbox" value="${email}" ${currentEmails.includes(email) ? 'checked' : ''}> <span>${u.name}</span>`;
+                    div.onclick = () => { const cb = div.querySelector('input'); cb.checked = !cb.checked; };
+                    container.appendChild(div);
                 });
-                status.textContent = "Erfolgreich! Wartet auf Admin-Freigabe.";
-            } catch (e) { status.textContent = "Fehler beim Upload."; }
+
+                document.getElementById('save-access-btn').onclick = async () => {
+                    const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+                    await updateDoc(doc(db, coll, id), { visibility: 'benutzerdefiniert', status: 'approved', allowedEmails: selected });
+                    closeModal();
+                };
+            }
         };
 
+        window.handleUpload = async (file) => {
+            if (!file || !subjectId) return;
+            const sRef = ref(storage, `exams/${subjectId}/${Date.now()}_${file.name}`);
+            const snap = await uploadBytes(sRef, file);
+            const url = await getDownloadURL(snap.ref);
+            await addDoc(collection(db, "exams"), { subjectId, fileName: file.name, url, status: 'pending', visibility: 'alle', allowedEmails: [], uploadedBy: auth.currentUser.uid, createdAt: serverTimestamp() });
+            alert("Hochgeladen! Wartet auf Freigabe.");
+        };
+
+        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
         window.logout = () => signOut(auth).then(() => location.href = 'login.html');
     </script>
 </body>

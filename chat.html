@@ -15,289 +15,76 @@
         }
 
         body {
-            margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--primary-blue);
-            color: white;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-blue); color: white; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
         }
 
         /* --- NAVBAR (MASTER DESIGN) --- */
         .navbar {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(15px);
-            padding: 0 40px;
-            height: 70px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 1000;
-            box-sizing: border-box;
-            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px);
+            padding: 0 40px; height: 70px; display: flex; justify-content: space-between;
+            align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1000; box-sizing: border-box; flex-shrink: 0;
         }
-
-        .nav-brand {
-            font-weight: bold;
-            font-size: 1.2rem;
-            color: white;
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 25px;
-        }
-
-            .nav-links a {
-                color: white;
-                text-decoration: none;
-                font-weight: 500;
-                opacity: 0.8;
-                transition: 0.3s;
-                font-size: 0.95rem;
-            }
-
-                .nav-links a:hover {
-                    opacity: 1;
-                }
-
-        .user-link {
-            text-decoration: none;
-            transition: 0.3s;
-            margin-left: 10px;
-        }
-
-            .user-link:hover .user-display {
-                opacity: 1;
-                text-decoration: underline;
-            }
-
-        .user-display {
-            opacity: 0.7;
-            font-size: 0.9rem;
-            color: white;
-            font-weight: bold;
-        }
-
-        .logout-btn {
-            opacity: 0.5;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
+        .nav-brand { font-weight: bold; font-size: 1.2rem; color: white; }
+        .nav-links { display: flex; align-items: center; gap: 25px; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 500; opacity: 0.8; transition: 0.3s; font-size: 0.95rem; }
+        .nav-links a:hover { opacity: 1; }
+        .user-link { text-decoration: none; transition: 0.3s; margin-left: 10px; }
+        .user-link:hover .user-display { opacity: 1; text-decoration: underline; }
+        .user-display { opacity: 0.7; font-size: 0.9rem; color: white; font-weight: bold; }
+        .logout-btn { opacity: 0.5; font-size: 0.9rem; cursor: pointer; }
 
         /* --- CHAT LAYOUT --- */
-        .main-layout {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-            background: var(--wa-bg);
-        }
+        .main-layout { display: flex; flex: 1; overflow: hidden; background: var(--wa-bg); }
 
         /* Sidebar */
-        .sidebar {
-            width: 350px;
-            background: var(--sidebar-bg);
-            border-right: 1px solid var(--sidebar-border);
-            display: flex;
-            flex-direction: column;
+        .sidebar { width: 350px; background: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border); display: flex; flex-direction: column; }
+        
+        .search-container { padding: 10px; border-bottom: 1px solid var(--sidebar-border); }
+        .search-bar { 
+            width: 100%; background: #202c33; border: none; padding: 10px 15px; 
+            border-radius: 8px; color: white; outline: none; font-size: 14px;
         }
 
-        .search-container {
-            padding: 10px;
-            border-bottom: 1px solid var(--sidebar-border);
-        }
-
-        .search-bar {
-            width: 100%;
-            background: #202c33;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            color: white;
-            outline: none;
-            font-size: 14px;
-        }
-
-        .contact-list {
-            flex: 1;
-            overflow-y: auto;
-        }
-
+        .contact-list { flex: 1; overflow-y: auto; }
         .contact-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 12px 20px;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            transition: 0.2s;
+            display: flex; align-items: center; gap: 15px; padding: 12px 20px;
+            cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05); transition: 0.2s;
         }
-
-            .contact-item:hover {
-                background: #202c33;
-            }
-
-            .contact-item.active {
-                background: #2a3942;
-            }
-
-        .avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: #2c6e8a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
+        .contact-item:hover { background: #202c33; }
+        .contact-item.active { background: #2a3942; }
+        .avatar { width: 45px; height: 45px; border-radius: 50%; background: #2c6e8a; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
 
         /* Chat Area */
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
+        .chat-area { flex: 1; display: flex; flex-direction: column; position: relative; }
+        .chat-area::before { content: ''; position: absolute; inset: 0; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); opacity: 0.06; pointer-events: none; }
 
-            .chat-area::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-                opacity: 0.06;
-                pointer-events: none;
-            }
-
-        .messages-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 50px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            z-index: 1;
-        }
-
+        .messages-container { flex: 1; overflow-y: auto; padding: 20px 50px; display: flex; flex-direction: column; gap: 4px; z-index: 1; }
+        
         /* Sprechblasen */
-        .msg-row {
-            display: flex;
-            margin-bottom: 2px;
-        }
+        .msg-row { display: flex; margin-bottom: 2px; }
+        .msg-row.own { justify-content: flex-end; }
+        .bubble { max-width: 65%; padding: 8px 12px; border-radius: 8px; font-size: 14.5px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.2); }
+        .msg-row.own .bubble { background: var(--wa-green); border-top-right-radius: 0; }
+        .msg-row:not(.own) .bubble { background: #202c33; border-top-left-radius: 0; }
+        
+        .bubble img, .bubble video { max-width: 100%; border-radius: 5px; margin-top: 5px; display: block; }
+        .file-link { display: flex; align-items: center; gap: 10px; color: #53bdeb; text-decoration: none; padding: 5px 0; }
 
-            .msg-row.own {
-                justify-content: flex-end;
-            }
-
-        .bubble {
-            max-width: 65%;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14.5px;
-            position: relative;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.2);
-        }
-
-        .msg-row.own .bubble {
-            background: var(--wa-green);
-            border-top-right-radius: 0;
-        }
-
-        .msg-row:not(.own) .bubble {
-            background: #202c33;
-            border-top-left-radius: 0;
-        }
-
-        .bubble img, .bubble video {
-            max-width: 100%;
-            border-radius: 5px;
-            margin-top: 5px;
-            display: block;
-        }
-
-        .file-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #53bdeb;
-            text-decoration: none;
-            padding: 5px 0;
-        }
-
-        .msg-meta {
-            display: flex;
-            justify-content: flex-end;
-            gap: 4px;
-            font-size: 10px;
-            opacity: 0.6;
-            margin-top: 4px;
-        }
+        .msg-meta { display: flex; justify-content: flex-end; gap: 4px; font-size: 10px; opacity: 0.6; margin-top: 4px; }
 
         /* Input Area */
-        .input-area {
-            background: #202c33;
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            z-index: 2;
-        }
+        .input-area { background: #202c33; padding: 10px 20px; display: flex; align-items: center; gap: 15px; z-index: 2; }
+        .input-wrap { flex: 1; background: #2a3942; border-radius: 8px; padding: 5px 15px; }
+        textarea { width: 100%; background: transparent; border: none; color: white; outline: none; resize: none; font-family: inherit; padding: 10px 0; max-height: 150px; }
+        .btn-icon { background: none; border: none; color: var(--text-gray); font-size: 22px; cursor: pointer; transition: 0.2s; }
+        .btn-icon:hover { color: white; }
+        .send-btn { color: #00a884; font-size: 26px; }
 
-        .input-wrap {
-            flex: 1;
-            background: #2a3942;
-            border-radius: 8px;
-            padding: 5px 15px;
-        }
-
-        textarea {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: white;
-            outline: none;
-            resize: none;
-            font-family: inherit;
-            padding: 10px 0;
-            max-height: 150px;
-        }
-
-        .btn-icon {
-            background: none;
-            border: none;
-            color: var(--text-gray);
-            font-size: 22px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-            .btn-icon:hover {
-                color: white;
-            }
-
-        .send-btn {
-            color: #00a884;
-            font-size: 26px;
-        }
-
-        .date-divider {
-            display: flex;
-            justify-content: center;
-            margin: 15px 0;
-        }
-
-            .date-divider span {
-                background: #182229;
-                padding: 5px 12px;
-                border-radius: 8px;
-                font-size: 11px;
-                color: var(--text-gray);
-            }
+        .date-divider { display: flex; justify-content: center; margin: 15px 0; }
+        .date-divider span { background: #182229; padding: 5px 12px; border-radius: 8px; font-size: 11px; color: var(--text-gray); }
     </style>
 </head>
 <body>
@@ -336,10 +123,10 @@
                 <!-- Hidden Inputs für Uploads -->
                 <input type="file" id="file-input" hidden onchange="uploadMedia(this.files[0], 'file')">
                 <input type="file" id="camera-input" hidden accept="image/*" capture="environment" onchange="uploadMedia(this.files[0], 'image')">
-
+                
                 <button class="btn-icon" onclick="document.getElementById('file-input').click()" title="Datei/Galerie">📎</button>
                 <button class="btn-icon" onclick="document.getElementById('camera-input').click()" title="Kamera">📷</button>
-
+                
                 <div class="input-wrap">
                     <textarea id="msg-input" placeholder="Nachricht schreiben..." rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
                 </div>
@@ -434,12 +221,12 @@
                 div.className = 'contact-item';
                 div.onclick = () => openChat(u.id, u.name);
                 div.innerHTML = `
-                        <div class="avatar">${u.name.charAt(0).toUpperCase()}</div>
-                        <div style="flex:1">
-                            <div style="font-weight:bold">${u.name}</div>
-                            <div style="font-size:12px; color:var(--text-gray)">${u.isAdmin ? 'Admin' : 'Student'}</div>
-                        </div>
-                    `;
+                    <div class="avatar">${u.name.charAt(0).toUpperCase()}</div>
+                    <div style="flex:1">
+                        <div style="font-weight:bold">${u.name}</div>
+                        <div style="font-size:12px; color:var(--text-gray)">${u.isAdmin ? 'Admin' : 'Student'}</div>
+                    </div>
+                `;
                 list.appendChild(div);
             });
         }
@@ -481,23 +268,23 @@
                     const isOwn = m.senderUid === currentUser.uid;
                     const row = document.createElement('div');
                     row.className = `msg-row ${isOwn ? 'own' : ''}`;
-                    const time = m.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+                    const time = m.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
                     let content = `<div>${m.text || ''}</div>`;
                     if (m.type === 'image') content = `<img src="${m.url}">`;
                     if (m.type === 'video') content = `<video src="${m.url}" controls></video>`;
                     if (m.type === 'file') content = `<a href="${m.url}" target="_blank" class="file-link">📄 ${m.fileName}</a>`;
 
                     row.innerHTML = `
-                            <div class="bubble">
-                                ${!isOwn ? `<div style="font-size:11px; color:#53bdeb; font-weight:bold; margin-bottom:4px">${m.senderName}</div>` : ''}
-                                ${content}
-                                <div class="msg-meta">
-                                    <span>${time}</span>
-                                    ${isOwn ? '<span style="color:#53bdeb">✓✓</span>' : ''}
-                                </div>
+                        <div class="bubble">
+                            ${!isOwn ? `<div style="font-size:11px; color:#53bdeb; font-weight:bold; margin-bottom:4px">${m.senderName}</div>` : ''}
+                            ${content}
+                            <div class="msg-meta">
+                                <span>${time}</span>
+                                ${isOwn ? '<span style="color:#53bdeb">✓✓</span>' : ''}
                             </div>
-                        `;
+                        </div>
+                    `;
                     container.appendChild(row);
                 });
                 container.scrollTop = container.scrollHeight;
@@ -523,7 +310,7 @@
         window.uploadMedia = async (file, typeHint) => {
             if (!file || !activeChatId) return;
             const statusArea = document.getElementById('messages-container');
-
+            
             try {
                 const fileRef = ref(storage, `chats/${activeChatId}/${Date.now()}_${file.name}`);
                 const snap = await uploadBytes(fileRef, file);

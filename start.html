@@ -14,7 +14,7 @@
 
         body {
             margin: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background: var(--primary-blue);
             color: white;
             height: 100vh;
@@ -23,11 +23,10 @@
             overflow: hidden;
         }
 
-        /* Einheitliche Navbar Proportionen */
+        /* NAVBAR */
         .navbar {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
             padding: 0 40px;
             height: 70px;
             display: flex;
@@ -41,7 +40,6 @@
         .nav-brand {
             font-weight: bold;
             font-size: 1.2rem;
-            color: white;
         }
 
         .nav-links {
@@ -59,21 +57,11 @@
                 font-size: 0.95rem;
             }
 
-                .nav-links a:hover {
-                    opacity: 1;
-                }
-
-        /* Profil-Link Styling */
         .user-link {
             text-decoration: none;
             transition: 0.3s;
             margin-left: 10px;
         }
-
-            .user-link:hover .user-display {
-                opacity: 1;
-                text-decoration: underline;
-            }
 
         .user-display {
             opacity: 0.7;
@@ -85,9 +73,10 @@
         .logout-btn {
             opacity: 0.5;
             font-size: 0.9rem;
+            cursor: pointer;
         }
 
-        /* Layout */
+        /* SIDEBAR */
         .main-layout {
             display: flex;
             flex: 1;
@@ -123,7 +112,7 @@
             padding: 15px 20px;
             border-bottom: 1px solid var(--sidebar-border);
             cursor: pointer;
-            transition: background 0.2s;
+            transition: 0.2s;
             color: var(--text-dark);
         }
 
@@ -139,11 +128,18 @@
             font-weight: 500;
         }
 
-        .chevron {
-            font-size: 1.2rem;
-            color: #adb5bd;
-            margin-left: 10px;
+        .settings-icon {
+            font-size: 16px;
+            opacity: 0.4;
+            padding: 5px;
+            transition: 0.2s;
         }
+
+            .settings-icon:hover {
+                opacity: 1;
+                color: #f39c12;
+                transform: rotate(45deg);
+            }
 
         .content-area {
             flex: 1;
@@ -181,6 +177,48 @@
             background: #27ae60;
             color: white;
         }
+
+        /* MODAL */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            background: #1b4f72;
+            margin: 5% auto;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            color: white;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+            .user-item:hover {
+                background: rgba(255,255,255,0.1);
+            }
+
+            .user-item input {
+                margin-right: 15px;
+                width: 18px;
+                height: 18px;
+            }
     </style>
 </head>
 <body>
@@ -188,12 +226,8 @@
     <nav class="navbar">
         <div class="nav-brand">🎓 Spicker Informatik</div>
         <div class="nav-links" id="nav-links-container">
-            <!-- Basis-Links -->
             <a href="start.html" style="border-bottom: 2px solid white;">Start</a>
             <a href="chat.html">Chat 💬</a>
-
-            <!-- Dynamische Links (Hilfe, Admin, Prof) werden per JS hier eingefügt -->
-
             <a href="profil.html" id="user-link-wrapper" class="user-link">
                 <span id="user-display" class="user-display">Lade...</span>
             </a>
@@ -206,73 +240,60 @@
             <div class="sidebar-header">Fächerübersicht</div>
             <div class="sidebar-list" id="subjects-list"></div>
         </aside>
-
         <main class="content-area">
             <div id="admin-area" class="admin-panel">
                 <h3 style="margin-top:0">Neues Fach anlegen</h3>
                 <input type="text" id="new-subject-name" placeholder="Name des Fachs...">
                 <button class="btn btn-add" onclick="createNewSubject()">Hinzufügen</button>
             </div>
-
-            <div id="welcome-message">
-                <h1>Willkommen!</h1>
-                <p>Wähle links ein Fach aus. Klicke auf deinen Namen oben, um dein Profil zu bearbeiten.</p>
-            </div>
+            <div id="welcome-message"><h1>Willkommen!</h1><p>Wähle links ein Fach aus.</p></div>
         </main>
+    </div>
+
+    <!-- MODAL FÜR NUTZERWAHL -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">Zugriff verwalten</h2>
+            <div id="user-list-container"></div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn" style="background:#7f8c8d; color:white;" onclick="closeModal()">Abbrechen</button>
+                <button id="save-access-btn" class="btn btn-add">Speichern</button>
+            </div>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
-            authDomain: "spickersite.firebaseapp.com",
-            projectId: "spickersite",
-            storageBucket: "spickersite.firebasestorage.app",
-            messagingSenderId: "515794720428",
-            appId: "1:515794720428:web:f509322fe888fb3c8a3109"
-        };
-
+        const firebaseConfig = { /* Deine Config */ };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        let currentUserData = null;
+
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
             const snap = await getDoc(doc(db, "users", user.uid));
-            const data = snap.data();
-
-            document.getElementById('user-display').textContent = data.name;
+            currentUserData = snap.data();
+            document.getElementById('user-display').textContent = currentUserData.name;
 
             const navContainer = document.getElementById('nav-links-container');
-            const userLinkWrapper = document.getElementById('user-link-wrapper');
-
-            // 1. Hilfe-Link (NUR für Nicht-Admins)
-            if (!data.isAdmin) {
-                const helpA = document.createElement('a');
-                helpA.href = 'help.html';
-                helpA.textContent = 'Hilfe ❓';
-                navContainer.insertBefore(helpA, userLinkWrapper);
-            }
-
-            // 2. Admin-Link (NUR für Admins)
-            if (data.isAdmin) {
-                const adminA = document.createElement('a');
-                adminA.href = 'admin.html';
-                adminA.textContent = 'Admin';
-                navContainer.insertBefore(adminA, userLinkWrapper);
+            const userLink = document.getElementById('user-link-wrapper');
+            if (currentUserData.isAdmin) {
+                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                navContainer.insertBefore(adminA, userLink);
                 document.getElementById('admin-area').style.display = 'block';
+            } else {
+                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userLink);
             }
+            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
+            navContainer.insertBefore(profA, userLink);
 
-            // 3. Professoren (FÜR ALLE) - Fächer wurden hier entfernt!
-            const profA = document.createElement('a');
-            profA.href = 'prof.html';
-            profA.textContent = 'Professoren';
-            navContainer.insertBefore(profA, userLinkWrapper);
-
-            loadSubjects(user.email, data.isAdmin);
+            loadSubjects(user.email, currentUserData.isAdmin);
         });
 
         function loadSubjects(userEmail, isAdmin) {
@@ -283,11 +304,19 @@
                     const sub = d.data();
                     const visibility = sub.visibility || 'alle';
                     const allowedEmails = sub.allowedEmails || [];
+
                     let hasAccess = isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()));
+
                     if (hasAccess) {
                         const item = document.createElement('div');
                         item.className = 'subject-item';
-                        item.innerHTML = `<span class="subject-name">${sub.name}</span><span class="chevron">›</span>`;
+                        item.innerHTML = `
+                                <span class="subject-name">${sub.name}</span>
+                                <div style="display:flex; align-items:center;">
+                                    ${isAdmin ? `<span class="settings-icon" onclick="event.stopPropagation(); manageVisibility('subjects', '${d.id}', '${sub.name}', '${visibility}', ${JSON.stringify(allowedEmails)})">⚙️</span>` : ''}
+                                    <span class="chevron">›</span>
+                                </div>
+                            `;
                         item.onclick = () => window.location.href = `fach.html?id=${d.id}`;
                         list.appendChild(item);
                     }
@@ -295,18 +324,53 @@
             });
         }
 
-        window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
+        window.manageVisibility = async (coll, id, name, currentVis, currentEmails) => {
+            const mode = prompt(`Sichtbarkeit für "${name}":\n1 = Alle\n2 = Nur Admins\n3 = Benutzerdefiniert\n4 = LÖSCHEN 🗑️`, "1");
+            if (!mode) return;
 
-        window.createNewSubject = async () => {
-            const nameInput = document.getElementById('new-subject-name');
-            const name = nameInput.value.trim();
-            if (!name) return;
-            try {
-                await addDoc(collection(db, "subjects"), {
-                    name: name, visibility: 'alle', allowedEmails: [], createdAt: new Date()
+            if (mode === "4") {
+                if (confirm("Wirklich löschen?")) { /* deleteDoc Logik hier */ }
+                return;
+            }
+
+            if (mode === "1" || mode === "2") {
+                await updateDoc(doc(db, coll, id), { visibility: mode === "1" ? 'alle' : 'niemand', allowedEmails: [] });
+                return;
+            }
+
+            if (mode === "3") {
+                const modal = document.getElementById('userModal');
+                const container = document.getElementById('user-list-container');
+                modal.style.display = 'block';
+                container.innerHTML = 'Lade Nutzer...';
+
+                const usersSnap = await getDocs(collection(db, "users"));
+                container.innerHTML = '';
+                usersSnap.forEach(uDoc => {
+                    const u = uDoc.data();
+                    const email = u.email.toLowerCase();
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `<input type="checkbox" value="${email}" ${currentEmails.includes(email) ? 'checked' : ''}> <span>${u.name} (${email})</span>`;
+                    div.onclick = (e) => { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
+                    container.appendChild(div);
                 });
-                nameInput.value = '';
-            } catch (e) { alert(e.message); }
+
+                document.getElementById('save-access-btn').onclick = async () => {
+                    const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+                    await updateDoc(doc(db, coll, id), { visibility: 'benutzerdefiniert', allowedEmails: selected });
+                    closeModal();
+                };
+            }
+        };
+
+        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
+        window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
+        window.createNewSubject = async () => {
+            const name = document.getElementById('new-subject-name').value.trim();
+            if (!name) return;
+            await addDoc(collection(db, "subjects"), { name, visibility: 'alle', allowedEmails: [], createdAt: new Date() });
+            document.getElementById('new-subject-name').value = '';
         };
     </script>
 </body>
