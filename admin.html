@@ -27,12 +27,64 @@
     </script>
 
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; background: #1b4f72; color: white; padding: 15px 30px; border-radius: 12px; margin-bottom: 20px; }
-        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #f0f4f8; 
+            margin: 0; 
+            padding: 20px; 
+        }
+
+        /* Neue Navbar Styles wie in start.html */
+        .navbar { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #1b4f72; 
+            color: white; 
+            padding: 15px 40px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            opacity: 0.8;
+            transition: 0.3s;
+        }
+
+        .nav-links a:hover {
+            opacity: 1;
+        }
+
+        .card { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }
+
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 15px; border-bottom: 1px solid #eee; text-align: left; }
-        .btn { padding: 8px 15px; border-radius: 50px; border: none; cursor: pointer; font-weight: bold; font-size: 12px; color: white; }
+        
+        .btn { 
+            padding: 8px 15px; 
+            border-radius: 50px; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 12px; 
+            color: white; 
+        }
+        
         .btn-approve { background: #2ecc71; }
         .btn-delete { background: #e74c3c; }
         .status-pending { color: #e67e22; font-weight: bold; }
@@ -40,15 +92,27 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>🛠 Adminpanel</h2>
-        <button class="btn" style="background:rgba(255,255,255,0.2)" onclick="window._fns.signOut(window._auth).then(()=>location.href='login.html')">Abmelden</button>
-    </div>
+    <!-- AKTUALISIERTE NAVBAR -->
+    <nav class="navbar">
+        <div style="font-weight: bold; font-size: 1.2rem;">🛠 Adminpanel</div>
+        <div class="nav-links">
+            <a href="start.html">Start</a>
+            <a href="profil.html">Profil</a>
+            <a href="#" onclick="window._fns.signOut(window._auth).then(()=>location.href='login.html')" style="opacity: 0.6;">Abmelden</a>
+        </div>
+    </nav>
 
     <div class="card">
         <h3>Benutzeranfragen (Live)</h3>
         <table>
-            <thead><tr><th>Name</th><th>E-Mail</th><th>Status</th><th>Aktion</th></tr></thead>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>E-Mail</th>
+                    <th>Status</th>
+                    <th>Aktion</th>
+                </tr>
+            </thead>
             <tbody id="user-list"></tbody>
         </table>
     </div>
@@ -62,7 +126,11 @@
 
         document.addEventListener('fbReady', () => {
             window._auth.onAuthStateChanged(user => {
-                if (!user || user.email.toLowerCase() !== SUPERADMIN) window.location.href = 'login.html';
+                // Sicherheitscheck: Nur der Superadmin darf hier sein
+                if (!user || user.email.toLowerCase() !== SUPERADMIN) {
+                    window.location.href = 'login.html';
+                    return;
+                }
                 
                 // Echtzeit-Überwachung der Nutzer
                 const q = window._fns.query(window._fns.collection(window._db, "users"), window._fns.orderBy("createdAt", "desc"));
@@ -71,7 +139,7 @@
                     const list = document.getElementById('user-list');
                     list.innerHTML = '';
                     
-                    // Sound abspielen, wenn ein neuer Nutzer dazugekommen ist
+                    // Sound abspielen bei neuen Anfragen
                     if (lastUserCount !== -1 && snap.size > lastUserCount) {
                         document.getElementById('ping-sound').play();
                     }
@@ -79,6 +147,7 @@
 
                     snap.forEach(d => {
                         const u = d.data();
+                        // Superadmin selbst nicht in der Liste anzeigen
                         if (u.email.toLowerCase() === SUPERADMIN) return;
                         
                         const tr = document.createElement('tr');
@@ -102,7 +171,9 @@
         }
 
         async function deleteUser(id) {
-            if(confirm("Nutzer wirklich löschen?")) await window._fns.deleteDoc(window._fns.doc(window._db, "users", id));
+            if(confirm("Nutzer wirklich löschen?")) {
+                await window._fns.deleteDoc(window._fns.doc(window._db, "users", id));
+            }
         }
     </script>
 </body>
