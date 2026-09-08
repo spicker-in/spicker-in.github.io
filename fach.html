@@ -175,6 +175,57 @@
                 opacity: 1;
                 transform: scale(1.2);
             }
+
+        /* --- MODAL STYLES (WIE START.HTML) --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            background: #1b4f72;
+            margin: 5% auto;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            color: white;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+            .user-item:hover {
+                background: rgba(255,255,255,0.1);
+            }
+
+            .user-item input {
+                margin-right: 15px;
+                width: 20px;
+                height: 20px;
+            }
+
+        .btn-modal {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -210,10 +261,22 @@
         </div>
     </div>
 
+    <!-- MODAL FÜR ZUGRIFFSSTEUERUNG -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">Zugriff verwalten</h2>
+            <div id="user-list-container"></div>
+            <div style="margin-top: 25px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn-modal" style="background:#7f8c8d; color:white;" onclick="closeModal()">Abbrechen</button>
+                <button id="save-access-btn" class="btn-modal" style="background:#27ae60; color:white;">Speichern</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const SUPABASE_URL = 'https://jdbcrsczsjkjjvcbesbb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkYmNyc2N6c2pramp2Y2Jlc2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjY3NTgsImV4cCI6MjEwNDQ0Mjc1OH0.pa2msgQ6h042iKsAia9rRqSsL6kmwSbuWv9l38xUZ2w';
@@ -277,7 +340,7 @@
 
                     if (isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()))) {
 
-                        // --- NEU: STATUS LOGIK FÜR DIE ANZEIGE ---
+                        // --- STATUS ANZEIGE ---
                         let statusText = "";
                         let statusColor = "rgba(255,255,255,0.5)";
 
@@ -335,7 +398,7 @@
                 `Aktion für "${name}":\n` +
                 `1 = Alle (Jeder kann es sehen)\n` +
                 `2 = Nur Admins (Gesperrt für Studenten)\n` +
-                `3 = Benutzerdefiniert (Nur bestimmte E-Mails)\n` +
+                `3 = Benutzerdefiniert (Nutzer auswählen)\n` +
                 `4 = LÖSCHEN 🗑️`,
                 currentVis === 'alle' ? "1" : (currentVis === 'niemand' ? "2" : "3")
             );
@@ -345,23 +408,40 @@
                     if (storagePath) await supabase.storage.from('exams').remove([storagePath]);
                     await deleteDoc(doc(db, coll, id));
                 }
-            } else if (mode === "1") {
-                await updateDoc(doc(db, coll, id), { visibility: 'alle', allowedEmails: [] });
-            } else if (mode === "2") {
-                await updateDoc(doc(db, coll, id), { visibility: 'niemand', allowedEmails: [] });
+            } else if (mode === "1" || mode === "2") {
+                await updateDoc(doc(db, coll, id), { visibility: mode === "1" ? 'alle' : 'niemand', allowedEmails: [] });
             } else if (mode === "3") {
-                // NEU: E-Mail Eingabe für benutzerdefinierten Zugriff
-                const emailsInput = prompt("Gib die E-Mails der Personen ein, die Zugriff haben sollen (mit Komma getrennt):", currentEmails.join(', '));
-                if (emailsInput !== null) {
-                    const emailArray = emailsInput.split(',').map(e => e.trim().toLowerCase()).filter(e => e !== "");
+                // MODAL ÖFFNEN (WIE IN START.HTML)
+                const modal = document.getElementById('userModal');
+                const container = document.getElementById('user-list-container');
+                document.getElementById('modal-title').textContent = `Zugriff für "${name}"`;
+                modal.style.display = 'block';
+                container.innerHTML = '<p>Lade Nutzerliste...</p>';
+
+                const usersSnap = await getDocs(collection(db, "users"));
+                container.innerHTML = '';
+                usersSnap.forEach(uDoc => {
+                    const u = uDoc.data();
+                    const email = u.email.toLowerCase();
+                    const div = document.createElement('div');
+                    div.className = 'user-item';
+                    div.innerHTML = `<input type="checkbox" value="${email}" ${currentEmails.includes(email) ? 'checked' : ''}> <span>${u.name} (${email})</span>`;
+                    div.onclick = (e) => { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
+                    container.appendChild(div);
+                });
+
+                document.getElementById('save-access-btn').onclick = async () => {
+                    const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
                     await updateDoc(doc(db, coll, id), {
                         visibility: 'benutzerdefiniert',
-                        allowedEmails: emailArray
+                        allowedEmails: selected
                     });
-                }
+                    closeModal();
+                };
             }
         };
 
+        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
         window.logout = () => signOut(auth).then(() => location.href = 'login.html');
     </script>
 </body>
