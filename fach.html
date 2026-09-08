@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Fachdetails – Spicker Informatik</title>
+    <!-- Supabase Bibliothek -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary-blue: #1b4f72;
@@ -20,7 +22,6 @@
             flex-direction: column;
         }
 
-        /* --- EINHEITLICHE NAVBAR (MASTER DESIGN) --- */
         .navbar {
             background: var(--navbar-bg);
             backdrop-filter: blur(15px);
@@ -62,17 +63,6 @@
                     opacity: 1;
                 }
 
-        .user-link {
-            text-decoration: none;
-            transition: 0.3s;
-            margin-left: 10px;
-        }
-
-            .user-link:hover .user-display {
-                opacity: 1;
-                text-decoration: underline;
-            }
-
         .user-display {
             opacity: 0.7;
             font-size: 0.9rem;
@@ -88,7 +78,6 @@
             text-decoration: none;
         }
 
-        /* --- CONTENT --- */
         .container {
             max-width: 900px;
             margin: 40px auto;
@@ -128,16 +117,15 @@
             opacity: 0.5;
             margin-left: 10px;
             font-size: 1.1rem;
+            transition: 0.2s;
         }
 
             .settings-icon:hover {
                 opacity: 1;
                 color: #f39c12;
                 transform: rotate(45deg);
-                transition: 0.2s;
             }
 
-        /* UPLOAD BEREICH */
         .upload-box {
             margin-top: 40px;
             padding-top: 20px;
@@ -181,7 +169,6 @@
                 transform: scale(1.2);
             }
 
-        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -220,12 +207,7 @@
         <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html">Chat 💬</a>
-
-            <!-- Hilfe/Admin/Prof werden hier per JS eingefügt -->
-
-            <a href="profil.html" id="user-link-wrapper" class="user-link">
-                <span id="user-display" class="user-display">Lade...</span>
-            </a>
+            <a href="profil.html" class="user-link"><span id="user-display" class="user-display">Lade...</span></a>
             <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
         </div>
     </nav>
@@ -234,14 +216,11 @@
         <div class="glass-card">
             <h1 id="subject-name" style="text-align:center; margin-bottom: 30px;">Lade Fach...</h1>
             <div id="exam-list"></div>
-
             <div class="upload-box">
                 <h3>Altklausur oder Foto hochladen</h3>
                 <div class="upload-controls">
-                    <!-- Versteckte Inputs -->
                     <input type="file" id="upload-file" hidden onchange="handleUpload(this.files[0])">
                     <input type="file" id="camera-file" hidden accept="image/*" capture="environment" onchange="handleUpload(this.files[0])">
-
                     <button class="btn-upload" onclick="document.getElementById('upload-file').click()">📎 Datei wählen</button>
                     <span class="camera-icon" onclick="document.getElementById('camera-file').click()" title="Foto aufnehmen">📷</span>
                 </div>
@@ -250,7 +229,6 @@
         </div>
     </div>
 
-    <!-- MODAL FÜR ZUGRIFFSSTEUERUNG -->
     <div id="userModal" class="modal">
         <div class="modal-content">
             <h2>Zugriff verwalten</h2>
@@ -266,7 +244,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+        // --- SUPABASE SETUP ---
+        const SUPABASE_URL = 'https://jdbcrsczsjkjjvcbesbb.supabase.co';
+        // FÜGE HIER DEN KEY EIN, DEN DU AUF BILD 110 KOPIERT HAST:
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkYmNyc2N6c2pramp2Y2Jlc2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjY3NTgsImV4cCI6MjEwNDQ0Mjc1OH0.pa2msgQ6h042iKsAia9rRqSsL6kmwSbuWv9l38xUZ2w';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -280,138 +263,77 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const storage = getStorage(app);
-
         const urlParams = new URLSearchParams(window.location.search);
         const subjectId = urlParams.get('id');
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
-
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
             if (!userData) return;
-
             document.getElementById('user-display').textContent = userData.name;
-
-            // NAVBAR LOGIK (Wie start.html)
-            const navContainer = document.getElementById('nav-links-container');
-            const userLink = document.getElementById('user-link-wrapper');
-
-            if (userData.isAdmin) {
-                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
-                navContainer.insertBefore(adminA, userLink);
-            } else {
-                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
-                navContainer.insertBefore(helpA, userLink);
-            }
-            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
-            navContainer.insertBefore(profA, userLink);
-
             loadSubjectDetails(user.email, userData.isAdmin);
         });
 
         async function loadSubjectDetails(userEmail, isAdmin) {
             if (!subjectId) return;
-
             const sDoc = await getDoc(doc(db, "subjects", subjectId));
             if (sDoc.exists()) document.getElementById('subject-name').textContent = sDoc.data().name;
 
             onSnapshot(query(collection(db, "exams"), where("subjectId", "==", subjectId)), (snapshot) => {
                 const list = document.getElementById('exam-list');
                 list.innerHTML = "";
-
-                if (snapshot.empty) {
-                    list.innerHTML = '<p style="text-align:center; opacity:0.5;">Noch keine Klausuren hochgeladen.</p>';
-                }
-
                 snapshot.forEach((d) => {
                     const exam = d.data();
                     const visibility = exam.visibility || 'alle';
                     const allowedEmails = exam.allowedEmails || [];
-
-                    let hasAccess = isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()));
-
-                    if (hasAccess) {
+                    if (isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()))) {
                         const item = document.createElement('div');
                         item.className = 'exam-item';
                         item.innerHTML = `
-                                <span>📄 ${exam.fileName} ${exam.status === 'pending' ? '<span class="status-badge">Wartet auf Freigabe</span>' : ''}</span>
+                                <span>📄 ${exam.fileName}</span>
                                 <div style="display:flex; align-items:center; gap:15px;">
                                     <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Download</a>
-                                    ${isAdmin ? `<span class="settings-icon" onclick="manageVisibility('exams', '${d.id}', '${exam.fileName}', '${visibility}', ${JSON.stringify(allowedEmails)})">⚙️</span>` : ''}
-                                </div>
-                            `;
+                                    ${isAdmin ? `<span class="settings-icon" onclick="manageVisibility('exams', '${d.id}', '${exam.fileName}', '${visibility}', ${JSON.stringify(allowedEmails)}, '${exam.storagePath || ''}')">⚙️</span>` : ''}
+                                </div>`;
                         list.appendChild(item);
                     }
                 });
             });
         }
 
-        window.manageVisibility = async (coll, id, name, currentVis, currentEmails) => {
-            const mode = prompt(`Sichtbarkeit für "${name}":\n1 = Alle freigeben\n2 = Nur Admins\n3 = Benutzerdefiniert\n4 = LÖSCHEN 🗑️`, "1");
-            if (!mode) return;
-
-            if (mode === "4") {
-                if (confirm("Klausur wirklich löschen?")) await deleteDoc(doc(db, coll, id));
-                return;
-            }
-
-            if (mode === "1" || mode === "2") {
-                await updateDoc(doc(db, coll, id), {
-                    visibility: mode === "1" ? 'alle' : 'niemand',
-                    status: 'approved',
-                    allowedEmails: []
-                });
-                return;
-            }
-
-            if (mode === "3") {
-                const modal = document.getElementById('userModal');
-                const container = document.getElementById('user-list-container');
-                modal.style.display = 'block';
-                const usersSnap = await getDocs(collection(db, "users"));
-                container.innerHTML = '';
-                usersSnap.forEach(uDoc => {
-                    const u = uDoc.data();
-                    const email = u.email.toLowerCase();
-                    const div = document.createElement('div');
-                    div.className = 'user-item';
-                    div.innerHTML = `<input type="checkbox" value="${email}" ${currentEmails.includes(email) ? 'checked' : ''}> <span>${u.name}</span>`;
-                    div.onclick = (e) => { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
-                    container.appendChild(div);
-                });
-
-                document.getElementById('save-access-btn').onclick = async () => {
-                    const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
-                    await updateDoc(doc(db, coll, id), { visibility: 'benutzerdefiniert', status: 'approved', allowedEmails: selected });
-                    closeModal();
-                };
-            }
-        };
-
         window.handleUpload = async (file) => {
             if (!file || !subjectId) return;
             const status = document.getElementById('status');
             status.textContent = "🚀 Upload läuft...";
-
             try {
-                const sRef = ref(storage, `exams/${subjectId}/${Date.now()}_${file.name}`);
-                const snap = await uploadBytes(sRef, file);
-                const url = await getDownloadURL(snap.ref);
-
+                const fileName = `${Date.now()}_${file.name}`;
+                const filePath = `${subjectId}/${fileName}`;
+                const { error } = await supabase.storage.from('exams').upload(filePath, file);
+                if (error) throw error;
+                const { data: urlData } = supabase.storage.from('exams').getPublicUrl(filePath);
                 await addDoc(collection(db, "exams"), {
-                    subjectId, fileName: file.name, url,
-                    status: 'pending', visibility: 'alle', allowedEmails: [],
+                    subjectId, fileName: file.name, url: urlData.publicUrl, storagePath: filePath,
+                    status: 'approved', visibility: 'alle', allowedEmails: [],
                     uploadedBy: auth.currentUser.uid, createdAt: serverTimestamp()
                 });
-                status.textContent = "✅ Hochgeladen! Wartet auf Admin-Freigabe.";
-                setTimeout(() => status.textContent = "", 5000);
-            } catch (e) { status.textContent = "❌ Fehler beim Upload."; }
+                status.textContent = "✅ Fertig!";
+                setTimeout(() => status.textContent = "", 3000);
+            } catch (e) { status.textContent = "❌ Fehler: " + e.message; }
         };
 
-        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
+        window.manageVisibility = async (coll, id, name, currentVis, currentEmails, storagePath) => {
+            const mode = prompt(`Aktion für "${name}":\n1 = Alle\n2 = Admins\n3 = Benutzerdefiniert\n4 = LÖSCHEN 🗑️`, "1");
+            if (mode === "4" && confirm("Wirklich löschen?")) {
+                if (storagePath) await supabase.storage.from('exams').remove([storagePath]);
+                await deleteDoc(doc(db, coll, id));
+            } else if (mode === "1" || mode === "2") {
+                await updateDoc(doc(db, coll, id), { visibility: mode === "1" ? 'alle' : 'niemand', allowedEmails: [] });
+            }
+        };
+
         window.logout = () => signOut(auth).then(() => location.href = 'login.html');
+        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
     </script>
 </body>
 </html>
