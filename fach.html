@@ -24,7 +24,7 @@
             flex-direction: column;
         }
 
-        /* --- NAVBAR (EXAKT WIE START.HTML) --- */
+        /* --- NAVBAR --- */
         .navbar {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
@@ -66,12 +66,6 @@
                     opacity: 1;
                 }
 
-        .user-link {
-            text-decoration: none;
-            transition: 0.3s;
-            margin-left: 10px;
-        }
-
         .user-display {
             opacity: 0.7;
             font-size: 0.9rem;
@@ -104,7 +98,6 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
-        /* Linksbündige Liste */
         #exam-list {
             text-align: left;
             margin-top: 20px;
@@ -124,14 +117,6 @@
             .exam-item:hover {
                 background: rgba(255, 255, 255, 0.15);
             }
-
-        .status-badge {
-            font-size: 10px;
-            padding: 3px 8px;
-            border-radius: 5px;
-            background: #f39c12;
-            margin-left: 10px;
-        }
 
         .settings-icon {
             cursor: pointer;
@@ -190,29 +175,6 @@
                 opacity: 1;
                 transform: scale(1.2);
             }
-
-        /* MODAL */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 2000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-        }
-
-        .modal-content {
-            background: #1b4f72;
-            margin: 5% auto;
-            padding: 25px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
     </style>
 </head>
 <body>
@@ -222,7 +184,6 @@
         <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html">Chat 💬</a>
-            <!-- Dynamische Links (Hilfe/Admin/Prof) werden hier eingefügt -->
             <a href="profil.html" id="user-link-wrapper" class="user-link">
                 <span id="user-display" class="user-display">Lade...</span>
             </a>
@@ -234,7 +195,6 @@
         <div class="glass-card">
             <h1 id="subject-name" style="text-align:center; margin-bottom: 30px;">Lade Fach...</h1>
 
-            <!-- Hier werden die Uploads linksbündig aufgelistet -->
             <div id="exam-list"></div>
 
             <div class="upload-box">
@@ -250,22 +210,10 @@
         </div>
     </div>
 
-    <!-- MODAL FÜR ZUGRIFFSSTEUERUNG -->
-    <div id="userModal" class="modal">
-        <div class="modal-content">
-            <h2>Zugriff verwalten</h2>
-            <div id="user-list-container" style="max-height: 300px; overflow-y: auto; margin: 15px 0;"></div>
-            <div style="text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn-upload" style="background:#7f8c8d;" onclick="closeModal()">Abbrechen</button>
-                <button id="save-access-btn" class="btn-upload">Speichern</button>
-            </div>
-        </div>
-    </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const SUPABASE_URL = 'https://jdbcrsczsjkjjvcbesbb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkYmNyc2N6c2pramp2Y2Jlc2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjY3NTgsImV4cCI6MjEwNDQ0Mjc1OH0.pa2msgQ6h042iKsAia9rRqSsL6kmwSbuWv9l38xUZ2w';
@@ -294,7 +242,6 @@
 
             document.getElementById('user-display').textContent = userData.name;
 
-            // NAVBAR LOGIK (EXAKT WIE START.HTML)
             const navContainer = document.getElementById('nav-links-container');
             const userLinkWrapper = document.getElementById('user-link-wrapper');
 
@@ -327,15 +274,36 @@
                     const exam = d.data();
                     const visibility = exam.visibility || 'alle';
                     const allowedEmails = exam.allowedEmails || [];
+
                     if (isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()))) {
+
+                        // --- NEU: STATUS LOGIK FÜR DIE ANZEIGE ---
+                        let statusText = "";
+                        let statusColor = "rgba(255,255,255,0.5)";
+
+                        if (visibility === 'alle') {
+                            statusText = "🔓 Alle";
+                        } else if (visibility === 'niemand') {
+                            statusText = "🔒 Nur Admins";
+                            statusColor = "#e74c3c";
+                        } else if (visibility === 'benutzerdefiniert') {
+                            statusText = `👥 ${allowedEmails.length > 0 ? allowedEmails.join(', ') : 'Bestimmte User'}`;
+                            statusColor = "#3498db";
+                        }
+
                         const item = document.createElement('div');
                         item.className = 'exam-item';
                         item.innerHTML = `
-                                <span>📄 ${exam.fileName}</span>
-                                <div style="display:flex; align-items:center; gap:15px;">
-                                    <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Download</a>
-                                    ${isAdmin ? `<span class="settings-icon" onclick="manageVisibility('exams', '${d.id}', '${exam.fileName}', '${visibility}', ${JSON.stringify(allowedEmails)}, '${exam.storagePath || ''}')">⚙️</span>` : ''}
-                                </div>`;
+                                    <div style="display:flex; flex-direction:column; gap:4px;">
+                                        <span style="font-weight:500;">📄 ${exam.fileName}</span>
+                                        <span style="font-size: 0.75rem; color: ${statusColor}; font-weight: bold;">
+                                            ${statusText}
+                                        </span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:15px;">
+                                        <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Download</a>
+                                        ${isAdmin ? `<span class="settings-icon" onclick="manageVisibility('exams', '${d.id}', '${exam.fileName}', '${visibility}', ${JSON.stringify(allowedEmails)}, '${exam.storagePath || ''}')">⚙️</span>` : ''}
+                                    </div>`;
                         list.appendChild(item);
                     }
                 });
@@ -363,17 +331,38 @@
         };
 
         window.manageVisibility = async (coll, id, name, currentVis, currentEmails, storagePath) => {
-            const mode = prompt(`Aktion für "${name}":\n1 = Alle\n2 = Nur Admins\n3 = Benutzerdefiniert\n4 = LÖSCHEN 🗑️`, "1");
-            if (mode === "4" && confirm("Wirklich löschen?")) {
-                if (storagePath) await supabase.storage.from('exams').remove([storagePath]);
-                await deleteDoc(doc(db, coll, id));
-            } else if (mode === "1" || mode === "2") {
-                await updateDoc(doc(db, coll, id), { visibility: mode === "1" ? 'alle' : 'niemand', allowedEmails: [] });
+            const mode = prompt(
+                `Aktion für "${name}":\n` +
+                `1 = Alle (Jeder kann es sehen)\n` +
+                `2 = Nur Admins (Gesperrt für Studenten)\n` +
+                `3 = Benutzerdefiniert (Nur bestimmte E-Mails)\n` +
+                `4 = LÖSCHEN 🗑️`,
+                currentVis === 'alle' ? "1" : (currentVis === 'niemand' ? "2" : "3")
+            );
+
+            if (mode === "4") {
+                if (confirm(`Möchtest du "${name}" wirklich unwiderruflich löschen?`)) {
+                    if (storagePath) await supabase.storage.from('exams').remove([storagePath]);
+                    await deleteDoc(doc(db, coll, id));
+                }
+            } else if (mode === "1") {
+                await updateDoc(doc(db, coll, id), { visibility: 'alle', allowedEmails: [] });
+            } else if (mode === "2") {
+                await updateDoc(doc(db, coll, id), { visibility: 'niemand', allowedEmails: [] });
+            } else if (mode === "3") {
+                // NEU: E-Mail Eingabe für benutzerdefinierten Zugriff
+                const emailsInput = prompt("Gib die E-Mails der Personen ein, die Zugriff haben sollen (mit Komma getrennt):", currentEmails.join(', '));
+                if (emailsInput !== null) {
+                    const emailArray = emailsInput.split(',').map(e => e.trim().toLowerCase()).filter(e => e !== "");
+                    await updateDoc(doc(db, coll, id), {
+                        visibility: 'benutzerdefiniert',
+                        allowedEmails: emailArray
+                    });
+                }
             }
         };
 
         window.logout = () => signOut(auth).then(() => location.href = 'login.html');
-        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
     </script>
 </body>
 </html>
