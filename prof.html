@@ -19,7 +19,7 @@
             flex-direction: column;
         }
 
-        /* --- NAVBAR (MASTER DESIGN) --- */
+        /* --- EINHEITLICHE NAVBAR (MASTER DESIGN) --- */
         .navbar {
             background: var(--navbar-bg);
             backdrop-filter: blur(15px);
@@ -32,11 +32,13 @@
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 1000;
             box-sizing: border-box;
+            flex-shrink: 0;
         }
 
         .nav-brand {
             font-weight: bold;
             font-size: 1.2rem;
+            color: white;
         }
 
         .nav-links {
@@ -52,12 +54,14 @@
                 opacity: 0.8;
                 transition: 0.3s;
                 font-size: 0.95rem;
+                white-space: nowrap;
             }
 
                 .nav-links a:hover {
                     opacity: 1;
                 }
 
+        /* Profil-Link Styling */
         .user-link {
             text-decoration: none;
             transition: 0.3s;
@@ -124,7 +128,6 @@
             margin-bottom: 15px;
         }
 
-        /* Beiträge / Anekdoten */
         .entries-container {
             margin-top: 20px;
             text-align: left;
@@ -159,7 +162,6 @@
             margin-top: 8px;
         }
 
-        /* Input Felder */
         input, textarea {
             width: 100%;
             padding: 10px;
@@ -185,11 +187,13 @@
 <body>
 
     <nav class="navbar">
-        <div class="nav-brand">🎓 Professoren-Verzeichnis</div>
+        <div class="nav-brand">🎓 Spicker Informatik</div>
         <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html">Chat 💬</a>
-            <a href="prof.html" style="border-bottom: 2px solid white;">Professoren</a>
+
+            <!-- Hilfe/Admin/Prof werden hier per JS eingefügt -->
+
             <a href="profil.html" id="user-link-wrapper" class="user-link">
                 <span id="user-display" class="user-display">Lade...</span>
             </a>
@@ -198,7 +202,6 @@
     </nav>
 
     <div class="container">
-        <!-- ADMIN: PROF HINZUFÜGEN -->
         <div id="admin-prof-add" class="admin-section">
             <h3>👨‍🏫 Neuen Professor hinzufügen (Admin)</h3>
             <input type="text" id="new-prof-name" placeholder="Name des Professors">
@@ -208,9 +211,7 @@
         </div>
 
         <h1>Unsere Professoren</h1>
-        <div class="prof-grid" id="prof-grid">
-            <!-- Profs werden hier geladen -->
-        </div>
+        <div class="prof-grid" id="prof-grid"></div>
     </div>
 
     <script type="module">
@@ -219,7 +220,15 @@
         import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, query, orderBy, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-        const firebaseConfig = { /* Deine Config */ };
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
+            authDomain: "spickersite.firebaseapp.com",
+            projectId: "spickersite",
+            storageBucket: "spickersite.firebasestorage.app",
+            messagingSenderId: "515794720428",
+            appId: "1:515794720428:web:f509322fe888fb3c8a3109"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -233,22 +242,34 @@
             currentUserData = snap.data();
             document.getElementById('user-display').textContent = currentUserData.name;
 
-            // Dynamische Navbar Logik
+            // DYNAMISCHE NAVBAR LOGIK
             const navContainer = document.getElementById('nav-links-container');
-            const userLink = document.getElementById('user-link-wrapper');
-            if (currentUserData.isAdmin) {
-                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
-                navContainer.insertBefore(adminA, userLink);
-                document.getElementById('admin-prof-add').style.display = 'block';
-            } else {
-                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
-                navContainer.insertBefore(helpA, userLink);
+            const userLinkWrapper = document.getElementById('user-link-wrapper');
+
+            // 1. Hilfe-Link (Nur für Nicht-Admins)
+            if (!currentUserData.isAdmin) {
+                const helpA = document.createElement('a');
+                helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userLinkWrapper);
             }
+
+            // 2. Admin-Link (Nur für Admins)
+            if (currentUserData.isAdmin) {
+                const adminA = document.createElement('a');
+                adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                navContainer.insertBefore(adminA, userLinkWrapper);
+                document.getElementById('admin-prof-add').style.display = 'block';
+            }
+
+            // 3. Professoren (Aktiv markiert)
+            const profA = document.createElement('a');
+            profA.href = 'prof.html'; profA.textContent = 'Professoren';
+            profA.style.borderBottom = "2px solid white"; // Aktiv-Status
+            navContainer.insertBefore(profA, userLinkWrapper);
 
             loadProfessors();
         });
 
-        // PROFESSOR HINZUFÜGEN (Admin)
         window.addProfessor = async () => {
             const name = document.getElementById('new-prof-name').value.trim();
             const file = document.getElementById('new-prof-photo').files[0];
@@ -259,15 +280,12 @@
             const url = await getDownloadURL(snap.ref);
 
             await addDoc(collection(db, "professors"), {
-                name: name,
-                photoUrl: url,
-                createdAt: serverTimestamp()
+                name: name, photoUrl: url, createdAt: serverTimestamp()
             });
             alert("Professor hinzugefügt!");
             location.reload();
         };
 
-        // PROFESSOREN LADEN
         function loadProfessors() {
             onSnapshot(collection(db, "professors"), (snapshot) => {
                 const grid = document.getElementById('prof-grid');
@@ -280,9 +298,9 @@
                             <img src="${prof.photoUrl}" class="prof-img">
                             <h2>${prof.name}</h2>
                             <div class="entries-container" id="entries-${d.id}">Lade Beiträge...</div>
-                            <textarea id="input-text-${d.id}" placeholder="Anekdote oder Info schreiben..."></textarea>
+                            <textarea id="input-text-${d.id}" placeholder="Anekdote schreiben..."></textarea>
                             <input type="file" id="input-file-${d.id}" accept="image/*">
-                            <button class="btn-action" onclick="addEntry('${d.id}')">Beitrag posten</button>
+                            <button class="btn-action" onclick="addEntry('${d.id}')">Posten</button>
                         `;
                     grid.appendChild(card);
                     loadEntries(d.id);
@@ -290,7 +308,6 @@
             });
         }
 
-        // BEITRÄGE LADEN
         function loadEntries(profId) {
             const q = query(collection(db, "prof_entries"), where("profId", "==", profId), orderBy("createdAt", "desc"));
             onSnapshot(q, (snap) => {
@@ -300,7 +317,6 @@
                     const e = docEntry.data();
                     const div = document.createElement('div');
                     div.className = 'entry';
-                    // Admin Logik: Name weglassen
                     const nameLabel = e.isAdminEntry ? '' : `<div class="entry-user">${e.userName}</div>`;
                     div.innerHTML = `
                             ${nameLabel}
@@ -312,7 +328,6 @@
             });
         }
 
-        // NEUEN BEITRAG POSTEN
         window.addEntry = async (profId) => {
             const text = document.getElementById(`input-text-${profId}`).value.trim();
             const file = document.getElementById(`input-file-${profId}`).files[0];
@@ -326,12 +341,8 @@
             }
 
             await addDoc(collection(db, "prof_entries"), {
-                profId: profId,
-                text: text,
-                photoUrl: photoUrl,
-                userName: currentUserData.name,
-                userUid: auth.currentUser.uid,
-                isAdminEntry: currentUserData.isAdmin || false, // Merken ob Admin
+                profId: profId, text: text, photoUrl: photoUrl,
+                userName: currentUserData.name, isAdminEntry: currentUserData.isAdmin || false,
                 createdAt: serverTimestamp()
             });
             document.getElementById(`input-text-${profId}`).value = '';
@@ -342,3 +353,4 @@
     </script>
 </body>
 </html>
+``` 🎓⚡
