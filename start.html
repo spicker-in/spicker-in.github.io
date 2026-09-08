@@ -152,13 +152,13 @@
     <nav class="navbar">
         <div style="font-weight: bold; font-size: 1.2rem;">🎓 Spicker Informatik</div>
         <div class="nav-links" id="nav-links-container">
+            <!-- Nur die Basis-Links bleiben im HTML -->
             <a href="start.html" style="border-bottom: 2px solid white;">Start</a>
             <a href="chat.html">Chat 💬</a>
             <a href="profil.html">Profil</a>
-            <!-- Hilfe wird hier für User eingefügt -->
-            <a href="admin.html">Admin</a>
-            <a href="fach.html">Fächer</a>
-            <a href="prof.html">Professoren</a>
+
+            <!-- Dynamische Links werden per JS eingefügt -->
+
             <span id="user-display" style="margin-left: 10px; opacity: 0.8; font-size: 0.9rem;">Lade...</span>
             <a href="#" onclick="logout()" style="opacity: 0.6;">Abmelden</a>
         </div>
@@ -208,16 +208,26 @@
 
             document.getElementById('user-display').textContent = data.name;
 
-            // HILFE LINK NUR FÜR NICHT-ADMINS
-            if (!data.isAdmin) {
-                const navContainer = document.getElementById('nav-links-container');
+            const navContainer = document.getElementById('nav-links-container');
+            const userDisplay = document.getElementById('user-display');
+
+            if (data.isAdmin) {
+                // Admin-Links erstellen
+                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                const fachA = document.createElement('a'); fachA.href = 'fach.html'; fachA.textContent = 'Fächer';
+                const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
+
+                navContainer.insertBefore(adminA, userDisplay);
+                navContainer.insertBefore(fachA, userDisplay);
+                navContainer.insertBefore(profA, userDisplay);
+
+                document.getElementById('admin-area').style.display = 'block';
+            } else {
+                // Hilfe-Link für normale User
                 const helpLink = document.createElement('a');
                 helpLink.href = 'help.html';
                 helpLink.textContent = 'Hilfe ❓';
-                // Vor dem Admin-Link einfügen
-                navContainer.insertBefore(helpLink, navContainer.querySelector('a[href="admin.html"]'));
-            } else {
-                document.getElementById('admin-area').style.display = 'block';
+                navContainer.insertBefore(helpLink, userDisplay);
             }
 
             loadSubjects(user.email, data.isAdmin);
