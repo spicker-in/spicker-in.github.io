@@ -249,19 +249,47 @@
                     const visibility = sub.visibility || 'alle';
                     const allowedEmails = sub.allowedEmails || [];
                     let hasAccess = false;
+
                     if (isAdmin) hasAccess = true;
                     else if (visibility === 'alle') hasAccess = true;
                     else if (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase())) hasAccess = true;
 
                     if (hasAccess) {
+                        // Karte erstellen
                         const div = document.createElement('div');
                         div.className = 'card';
-                        div.innerHTML = `
-                                <h3>${sub.name}</h3>
-                                ${isAdmin ? `<span class="settings-icon" onclick="event.stopPropagation(); manageVisibility('${d.id}', '${sub.name}', '${visibility}', ${JSON.stringify(allowedEmails)})">⚙️</span>` : ''}
-                                ${isAdmin ? `<span class="visibility-badge">${visibility}</span>` : ''}
-                            `;
-                        div.onclick = () => window.location.href = `fach.html?id=${d.id}`;
+
+                        // Titel
+                        const title = document.createElement('h3');
+                        title.textContent = sub.name;
+                        div.appendChild(title);
+
+                        if (isAdmin) {
+                            // Zahnrad-Icon (Settings)
+                            const settingsIcon = document.createElement('span');
+                            settingsIcon.className = 'settings-icon';
+                            settingsIcon.textContent = '⚙️';
+                            settingsIcon.style.cursor = 'pointer';
+
+                            // WICHTIG: Hier wird der Klick-Event sauber abgefangen
+                            settingsIcon.onclick = (e) => {
+                                e.stopPropagation(); // Verhindert das Weiterleiten zur fach.html
+                                manageVisibility(d.id, sub.name, visibility, allowedEmails);
+                            };
+                            div.appendChild(settingsIcon);
+
+                            // Sichtbarkeits-Badge
+                            const badge = document.createElement('span');
+                            badge.className = 'visibility-badge';
+                            badge.textContent = visibility;
+                            div.appendChild(badge);
+                        }
+
+                        // Klick auf die Karte leitet zum Fach weiter
+                        div.onclick = () => {
+                            window.location.href = `fach.html?id=${d.id}`;
+                        };
+
                         grid.appendChild(div);
                     }
                 });
@@ -343,9 +371,8 @@
                 };
             }
         };
-
         window.closeModal = () => {
-            document.getElementById('userModal').style.display = 'none';
+            document.getElementById(document.getElementById('userModal').style.display = 'none');
         };
 
         window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
