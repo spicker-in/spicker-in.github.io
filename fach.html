@@ -370,6 +370,7 @@
             } else if (mode === "1" || mode === "2") {
                 await updateDoc(doc(db, coll, id), { visibility: mode === "1" ? 'alle' : 'niemand', allowedEmails: [] });
             }
+            else if(sto)
         };
 
         window.logout = () => signOut(auth).then(() => location.href = 'login.html');
