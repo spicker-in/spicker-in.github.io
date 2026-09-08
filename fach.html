@@ -9,11 +9,13 @@
         :root {
             --primary-blue: #1b4f72;
             --navbar-bg: rgba(255, 255, 255, 0.1);
+            --hover-grey: #e9ecef;
+            --text-dark: #333;
         }
 
         body {
             margin: 0;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1920&q=80') no-repeat center fixed;
             background-size: cover;
             color: white;
@@ -22,8 +24,9 @@
             flex-direction: column;
         }
 
+        /* --- NAVBAR (EXAKT WIE START.HTML) --- */
         .navbar {
-            background: var(--navbar-bg);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             padding: 0 40px;
@@ -63,6 +66,12 @@
                     opacity: 1;
                 }
 
+        .user-link {
+            text-decoration: none;
+            transition: 0.3s;
+            margin-left: 10px;
+        }
+
         .user-display {
             opacity: 0.7;
             font-size: 0.9rem;
@@ -78,6 +87,7 @@
             text-decoration: none;
         }
 
+        /* --- CONTENT --- */
         .container {
             max-width: 900px;
             margin: 40px auto;
@@ -94,6 +104,12 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
+        /* Linksbündige Liste */
+        #exam-list {
+            text-align: left;
+            margin-top: 20px;
+        }
+
         .exam-item {
             background: rgba(255, 255, 255, 0.1);
             padding: 15px 20px;
@@ -102,7 +118,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: 0.2s;
         }
+
+            .exam-item:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
 
         .status-badge {
             font-size: 10px;
@@ -126,6 +147,7 @@
                 transform: rotate(45deg);
             }
 
+        /* UPLOAD BEREICH */
         .upload-box {
             margin-top: 40px;
             padding-top: 20px;
@@ -169,6 +191,7 @@
                 transform: scale(1.2);
             }
 
+        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -190,14 +213,6 @@
             color: white;
             border: 1px solid rgba(255,255,255,0.2);
         }
-
-        .user-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -207,7 +222,10 @@
         <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html">Chat 💬</a>
-            <a href="profil.html" class="user-link"><span id="user-display" class="user-display">Lade...</span></a>
+            <!-- Dynamische Links (Hilfe/Admin/Prof) werden hier eingefügt -->
+            <a href="profil.html" id="user-link-wrapper" class="user-link">
+                <span id="user-display" class="user-display">Lade...</span>
+            </a>
             <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
         </div>
     </nav>
@@ -215,7 +233,10 @@
     <div class="container">
         <div class="glass-card">
             <h1 id="subject-name" style="text-align:center; margin-bottom: 30px;">Lade Fach...</h1>
+
+            <!-- Hier werden die Uploads linksbündig aufgelistet -->
             <div id="exam-list"></div>
+
             <div class="upload-box">
                 <h3>Altklausur oder Foto hochladen</h3>
                 <div class="upload-controls">
@@ -229,6 +250,7 @@
         </div>
     </div>
 
+    <!-- MODAL FÜR ZUGRIFFSSTEUERUNG -->
     <div id="userModal" class="modal">
         <div class="modal-content">
             <h2>Zugriff verwalten</h2>
@@ -245,9 +267,7 @@
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- SUPABASE SETUP ---
         const SUPABASE_URL = 'https://jdbcrsczsjkjjvcbesbb.supabase.co';
-        // FÜGE HIER DEN KEY EIN, DEN DU AUF BILD 110 KOPIERT HAST:
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkYmNyc2N6c2pramp2Y2Jlc2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjY3NTgsImV4cCI6MjEwNDQ0Mjc1OH0.pa2msgQ6h042iKsAia9rRqSsL6kmwSbuWv9l38xUZ2w';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -271,7 +291,24 @@
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
             if (!userData) return;
+
             document.getElementById('user-display').textContent = userData.name;
+
+            // NAVBAR LOGIK (EXAKT WIE START.HTML)
+            const navContainer = document.getElementById('nav-links-container');
+            const userLinkWrapper = document.getElementById('user-link-wrapper');
+
+            if (userData.isAdmin) {
+                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                navContainer.insertBefore(adminA, userLinkWrapper);
+            } else {
+                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                navContainer.insertBefore(helpA, userLinkWrapper);
+            }
+
+            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
+            navContainer.insertBefore(profA, userLinkWrapper);
+
             loadSubjectDetails(user.email, userData.isAdmin);
         });
 
@@ -283,6 +320,9 @@
             onSnapshot(query(collection(db, "exams"), where("subjectId", "==", subjectId)), (snapshot) => {
                 const list = document.getElementById('exam-list');
                 list.innerHTML = "";
+                if (snapshot.empty) {
+                    list.innerHTML = '<p style="text-align:center; opacity:0.5;">Noch keine Klausuren hochgeladen.</p>';
+                }
                 snapshot.forEach((d) => {
                     const exam = d.data();
                     const visibility = exam.visibility || 'alle';
@@ -323,7 +363,7 @@
         };
 
         window.manageVisibility = async (coll, id, name, currentVis, currentEmails, storagePath) => {
-            const mode = prompt(`Aktion für "${name}":\n1 = Alle\n2 = Admins\n3 = Benutzerdefiniert\n4 = LÖSCHEN 🗑️`, "1");
+            const mode = prompt(`Aktion für "${name}":\n1 = Alle\n2 = Nur Admins\n3 = Benutzerdefiniert\n4 = LÖSCHEN 🗑️`, "1");
             if (mode === "4" && confirm("Wirklich löschen?")) {
                 if (storagePath) await supabase.storage.from('exams').remove([storagePath]);
                 await deleteDoc(doc(db, coll, id));
