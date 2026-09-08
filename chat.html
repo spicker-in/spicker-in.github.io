@@ -1,0 +1,244 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat – SpickerSeite</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: sans-serif;
+            background: #1b4f72;
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar {
+            background: rgba(255,255,255,0.1);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar für Admin */
+        .chat-sidebar {
+            width: 250px;
+            background: rgba(0,0,0,0.2);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            overflow-y: auto;
+            display: none;
+        }
+
+        .user-link {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+            .user-link:hover {
+                background: rgba(255,255,255,0.1);
+            }
+
+        /* Haupt-Chat */
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255,255,255,0.05);
+        }
+
+        #message-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+        }
+
+            .msg.sent {
+                align-self: flex-end;
+                background: #27ae60;
+            }
+
+            .msg.received {
+                align-self: flex-start;
+                background: rgba(255,255,255,0.2);
+            }
+
+            .msg img {
+                max-width: 100%;
+                border-radius: 10px;
+                margin-top: 5px;
+            }
+
+        .chat-input-area {
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border-radius: 25px;
+            border: none;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div style="font-weight: bold;">💬 Nachrichten</div>
+        <div><a href="start.html" style="color: white; text-decoration: none;">Zurück</a></div>
+    </nav>
+
+    <div class="chat-container">
+        <aside class="chat-sidebar" id="admin-sidebar"></aside>
+        <main class="chat-main">
+            <div id="message-area"></div>
+            <div class="chat-input-area">
+                <button class="btn-icon" onclick="document.getElementById('file-input').click()">📎</button>
+                <button class="btn-icon" onclick="document.getElementById('photo-input').click()">📷</button>
+                <input type="file" id="file-input" hidden onchange="uploadFile(this.files[0])">
+                <input type="file" id="photo-input" hidden accept="image/*" capture="environment" onchange="uploadFile(this.files[0])">
+
+                <input type="text" id="msg-input" placeholder="Nachricht schreiben...">
+                <button class="btn-icon" onclick="sendMessage()">🚀</button>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
+            authDomain: "spickersite.firebaseapp.com",
+            projectId: "spickersite",
+            storageBucket: "spickersite.firebasestorage.app",
+            messagingSenderId: "515794720428",
+            appId: "1:515794720428:web:f509322fe888fb3c8a3109"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let currentUser = null;
+        let activeChatPartner = 'system'; // Standardmäßig System/Admin Chat
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) return window.location.href = 'login.html';
+            currentUser = user;
+
+            // Admin-Logik: Sidebar füllen
+            if (user.email === 'julianknuhr92@gmail.com') {
+                document.getElementById('admin-sidebar').style.display = 'block';
+                const usersSnap = await getDocs(collection(db, "users"));
+                usersSnap.forEach(doc => {
+                    if (doc.data().email !== user.email) {
+                        const div = document.createElement('div');
+                        div.className = 'user-link';
+                        div.textContent = doc.data().name;
+                        div.onclick = () => loadChat(doc.id);
+                        document.getElementById('admin-sidebar').appendChild(div);
+                    }
+                });
+            }
+            loadChat(activeChatPartner);
+        });
+
+        function loadChat(partnerUid) {
+            activeChatPartner = partnerUid;
+            const area = document.getElementById('message-area');
+
+            // Query: Nachrichten zwischen mir und Partner (oder alle für Admin)
+            const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
+
+            onSnapshot(q, (snap) => {
+                area.innerHTML = '';
+                snap.forEach(d => {
+                    const m = d.data();
+                    // Filter: Zeige nur Nachrichten, die mich betreffen (außer ich bin Admin)
+                    const isAdmin = currentUser.email === 'julianknuhr92@gmail.com';
+                    const isMyMessage = m.senderUid === currentUser.uid || m.receiverUid === currentUser.uid;
+
+                    if (isAdmin || isMyMessage) {
+                        const div = document.createElement('div');
+                        div.className = `msg ${m.senderUid === currentUser.uid ? 'sent' : 'received'}`;
+
+                        if (m.type === 'text') div.textContent = m.text;
+                        if (m.type === 'file') {
+                            div.innerHTML = `<a href="${m.url}" target="_blank" style="color:white">📎 Datei: ${m.fileName}</a>`;
+                        }
+                        if (m.type === 'image') {
+                            div.innerHTML = `<img src="${m.url}"><br><small>${m.text || ''}</small>`;
+                        }
+                        area.appendChild(div);
+                    }
+                });
+                area.scrollTop = area.scrollHeight;
+            });
+        }
+
+        window.sendMessage = async () => {
+            const input = document.getElementById('msg-input');
+            if (!input.value.trim()) return;
+            await addDoc(collection(db, "messages"), {
+                senderUid: currentUser.uid,
+                senderName: currentUser.displayName || 'Nutzer',
+                receiverUid: activeChatPartner,
+                text: input.value,
+                timestamp: new Date(),
+                type: 'text'
+            });
+            input.value = '';
+        };
+
+        window.uploadFile = async (file) => {
+            if (!file) return;
+            const fileRef = ref(storage, `chats/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(fileRef, file);
+            const url = await getDownloadURL(snapshot.ref);
+
+            const type = file.type.startsWith('image/') ? 'image' : 'file';
+            await addDoc(collection(db, "messages"), {
+                senderUid: currentUser.uid,
+                receiverUid: activeChatPartner,
+                url: url,
+                fileName: file.name,
+                type: type,
+                timestamp: new Date()
+            });
+        };
+    </script>
+</body>
+</html>

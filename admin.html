@@ -6,7 +6,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, addDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -22,141 +22,66 @@
         const db = getFirestore(app);
 
         window._db = db; window._auth = auth;
-        window._fns = { collection, onSnapshot, doc, updateDoc, deleteDoc, signOut, query, orderBy };
+        window._fns = { collection, onSnapshot, doc, updateDoc, deleteDoc, signOut, query, orderBy, addDoc, increment };
         document.dispatchEvent(new Event('fbReady'));
     </script>
-
     <style>
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: #f0f4f8; 
-            margin: 0; 
-            padding: 20px; 
-        }
-
-        /* Neue Navbar Styles wie in start.html */
-        .navbar { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            background: #1b4f72; 
-            color: white; 
-            padding: 15px 40px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 25px;
-        }
-
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            opacity: 0.8;
-            transition: 0.3s;
-        }
-
-        .nav-links a:hover {
-            opacity: 1;
-        }
-
-        .card { 
-            background: white; 
-            padding: 25px; 
-            border-radius: 16px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-        }
-
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; background: #1b4f72; color: white; padding: 15px 40px; border-radius: 12px; margin-bottom: 20px; }
+        .nav-links { display: flex; gap: 20px; }
+        .nav-links a { color: white; text-decoration: none; font-weight: bold; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; border-bottom: 1px solid #eee; text-align: left; }
-        
-        .btn { 
-            padding: 8px 15px; 
-            border-radius: 50px; 
-            border: none; 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 12px; 
-            color: white; 
-        }
-        
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .btn { padding: 6px 12px; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; font-size: 11px; color: white; }
         .btn-approve { background: #2ecc71; }
+        .btn-points { background: #f1c40f; color: #333; }
+        .btn-chat { background: #3498db; }
         .btn-delete { background: #e74c3c; }
-        .status-pending { color: #e67e22; font-weight: bold; }
-        .status-active { color: #2ecc71; font-weight: bold; }
     </style>
 </head>
 <body>
-    <!-- AKTUALISIERTE NAVBAR -->
     <nav class="navbar">
-        <div style="font-weight: bold; font-size: 1.2rem;">🛠 Adminpanel</div>
+        <div style="font-weight: bold;">🛠 Adminpanel</div>
         <div class="nav-links">
             <a href="start.html">Start</a>
+            <a href="chat.html">Nachrichten 💬</a>
             <a href="profil.html">Profil</a>
-            <a href="#" onclick="window._fns.signOut(window._auth).then(()=>location.href='login.html')" style="opacity: 0.6;">Abmelden</a>
+            <a href="#" onclick="window._fns.signOut(window._auth).then(()=>location.href='login.html')">Abmelden</a>
         </div>
     </nav>
 
     <div class="card">
-        <h3>Benutzeranfragen (Live)</h3>
+        <h3>👥 Benutzer & Punkte</h3>
         <table>
             <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>E-Mail</th>
-                    <th>Status</th>
-                    <th>Aktion</th>
-                </tr>
+                <tr><th>Name</th><th>E-Mail</th><th>Punkte</th><th>Aktion</th></tr>
             </thead>
             <tbody id="user-list"></tbody>
         </table>
     </div>
 
-    <!-- Sound für neue Anfragen -->
-    <audio id="ping-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
-
     <script>
         const SUPERADMIN = 'julianknuhr92@gmail.com';
-        let lastUserCount = -1;
-
+        
         document.addEventListener('fbReady', () => {
             window._auth.onAuthStateChanged(user => {
-                // Sicherheitscheck: Nur der Superadmin darf hier sein
-                if (!user || user.email.toLowerCase() !== SUPERADMIN) {
-                    window.location.href = 'login.html';
-                    return;
-                }
+                if (!user || user.email.toLowerCase() !== SUPERADMIN) window.location.href = 'login.html';
                 
-                // Echtzeit-Überwachung der Nutzer
-                const q = window._fns.query(window._fns.collection(window._db, "users"), window._fns.orderBy("createdAt", "desc"));
-                
-                window._fns.onSnapshot(q, (snap) => {
+                window._fns.onSnapshot(window._fns.collection(window._db, "users"), (snap) => {
                     const list = document.getElementById('user-list');
                     list.innerHTML = '';
-                    
-                    // Sound abspielen bei neuen Anfragen
-                    if (lastUserCount !== -1 && snap.size > lastUserCount) {
-                        document.getElementById('ping-sound').play();
-                    }
-                    lastUserCount = snap.size;
-
                     snap.forEach(d => {
                         const u = d.data();
-                        // Superadmin selbst nicht in der Liste anzeigen
                         if (u.email.toLowerCase() === SUPERADMIN) return;
-                        
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                             <td>${u.name}</td>
                             <td>${u.email}</td>
-                            <td class="${u.isApproved ? 'status-active' : 'status-pending'}">${u.isApproved ? 'Aktiv' : 'Wartet...'}</td>
+                            <td><b>${u.points || 0}</b></td>
                             <td>
-                                ${!u.isApproved ? `<button class="btn btn-approve" onclick="approve('${d.id}')">Freigeben</button>` : ''}
+                                <button class="btn btn-points" onclick="givePoints('${d.id}', '${u.name}')">Punkte geben</button>
+                                <button class="btn btn-chat" onclick="location.href='chat.html?uid=${d.id}'">Chat öffnen</button>
                                 <button class="btn btn-delete" onclick="deleteUser('${d.id}')">Löschen</button>
                             </td>
                         `;
@@ -166,15 +91,30 @@
             });
         });
 
-        async function approve(id) {
-            await window._fns.updateDoc(window._fns.doc(window._db, "users", id), { isApproved: true });
-        }
+        window.givePoints = async (userUid, userName) => {
+            const pts = prompt(`Wie viele Punkte für ${userName}?`, "10");
+            if (!pts || isNaN(pts)) return;
+            const points = parseInt(pts);
 
-        async function deleteUser(id) {
-            if(confirm("Nutzer wirklich löschen?")) {
-                await window._fns.deleteDoc(window._fns.doc(window._db, "users", id));
-            }
-        }
+            // 1. Punkte gutschreiben
+            await window._fns.updateDoc(window._fns.doc(window._db, "users", userUid), {
+                points: window._fns.increment(points)
+            });
+
+            // 2. Automatische Chat-Nachricht senden
+            await window._fns.addDoc(window._fns.collection(window._db, "messages"), {
+                senderUid: 'system',
+                senderName: 'System',
+                receiverUid: userUid,
+                text: `🎉 Glückwunsch! Du hast ${points} Punkte bekommen.`,
+                timestamp: new Date(),
+                type: 'text'
+            });
+
+            alert("Punkte vergeben und Nutzer benachrichtigt!");
+        };
+
+        async function deleteUser(id) { if(confirm("Löschen?")) await window._fns.deleteDoc(window._fns.doc(window._db, "users", id)); }
     </script>
 </body>
 </html>
