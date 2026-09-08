@@ -27,9 +27,10 @@
     </script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; }
-        .navbar { display: flex; justify-content: space-between; align-items: center; background: #1b4f72; color: white; padding: 15px 40px; border-radius: 12px; margin-bottom: 20px; }
-        .nav-links { display: flex; gap: 20px; }
-        .nav-links a { color: white; text-decoration: none; font-weight: bold; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; background: #1b4f72; color: white; padding: 15px 40px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; font-weight: bold; opacity: 0.8; transition: 0.3s; }
+        .nav-links a:hover { opacity: 1; }
         .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
@@ -42,13 +43,17 @@
 </head>
 <body>
     <nav class="navbar">
-        <div style="font-weight: bold;">🛠 Adminpanel</div>
-        <div class="nav-links">
-            <a href="start.html">Start</a>
-            <a href="chat.html">Nachrichten 💬</a>
-            <a href="profil.html">Profil</a>
-            <a href="#" onclick="window._fns.signOut(window._auth).then(()=>location.href='login.html')">Abmelden</a>
-        </div>
+        <div style="font-weight: bold; font-size: 1.2rem;">🛠 Adminpanel</div>
+<div class="nav-links">
+    <a href="start.html">Start</a>
+    <a href="chat.html">Chat 💬</a>
+    <a href="profil.html">Profil</a>
+    <a href="support.html">Support</a>
+    <a href="admin.html" style="border-bottom: 2px solid white;">Admin 🛠</a>
+    <a href="fach.html">Fächer</a>
+    <a href="prof.html">Professoren</a>
+    <a href="#" onclick="window._fns.signOut(window._auth).then(()=>location.href='login.html')" style="opacity: 0.6;">Abmelden</a>
+</div>
     </nav>
 
     <div class="card">
@@ -63,11 +68,9 @@
 
     <script>
         const SUPERADMIN = 'julianknuhr92@gmail.com';
-        
         document.addEventListener('fbReady', () => {
             window._auth.onAuthStateChanged(user => {
                 if (!user || user.email.toLowerCase() !== SUPERADMIN) window.location.href = 'login.html';
-                
                 window._fns.onSnapshot(window._fns.collection(window._db, "users"), (snap) => {
                     const list = document.getElementById('user-list');
                     list.innerHTML = '';
@@ -95,25 +98,14 @@
             const pts = prompt(`Wie viele Punkte für ${userName}?`, "10");
             if (!pts || isNaN(pts)) return;
             const points = parseInt(pts);
-
-            // 1. Punkte gutschreiben
-            await window._fns.updateDoc(window._fns.doc(window._db, "users", userUid), {
-                points: window._fns.increment(points)
-            });
-
-            // 2. Automatische Chat-Nachricht senden
+            await window._fns.updateDoc(window._fns.doc(window._db, "users", userUid), { points: window._fns.increment(points) });
             await window._fns.addDoc(window._fns.collection(window._db, "messages"), {
-                senderUid: 'system',
-                senderName: 'System',
-                receiverUid: userUid,
+                senderUid: 'system', senderName: 'System', receiverUid: userUid,
                 text: `🎉 Glückwunsch! Du hast ${points} Punkte bekommen.`,
-                timestamp: new Date(),
-                type: 'text'
+                timestamp: new Date(), type: 'text'
             });
-
-            alert("Punkte vergeben und Nutzer benachrichtigt!");
+            alert("Punkte vergeben!");
         };
-
         async function deleteUser(id) { if(confirm("Löschen?")) await window._fns.deleteDoc(window._fns.doc(window._db, "users", id)); }
     </script>
 </body>

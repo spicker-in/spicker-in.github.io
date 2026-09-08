@@ -7,12 +7,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		chat.html = chat.html
 		fach.html = fach.html
+		help.html = help.html
 		index.html = index.html
 		admin.html = admin.html
 		login.html = login.html
 		start.html = start.html
+		prof.html = prof.html
 		profil.html = profil.html
-		Professoren.html = Professoren.html
 	EndProjectSection
 EndProject
 Global
