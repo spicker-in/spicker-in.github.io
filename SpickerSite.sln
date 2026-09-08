@@ -9,8 +9,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		index.html = index.html
 		admin.html = admin.html
 		login.html = login.html
-		pwreset.html = pwreset.html
 		start.html = start.html
+		Professoren.html = Professoren.html
 		verify.html = verify.html
 	EndProjectSection
 EndProject

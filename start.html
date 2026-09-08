@@ -4,11 +4,23 @@
     <meta charset="UTF-8">
     <title>Startseite – SpickerSeite</title>
     <style>
+        :root {
+            --sidebar-bg: #f8f9fa;
+            --sidebar-border: #dee2e6;
+            --text-dark: #333;
+            --primary-blue: #1b4f72;
+            --hover-grey: #e9ecef;
+        }
+
         body {
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1b4f72;
+            background: var(--primary-blue);
             color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .navbar {
@@ -19,18 +31,106 @@
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
         }
 
-        .container {
-            max-width: 1000px;
-            margin: 40px auto;
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR STYLING (Wie im Screenshot) */
+        .sidebar {
+            width: 320px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--sidebar-border);
+            display: flex;
+            flex-direction: column;
+            color: var(--text-dark);
+        }
+
+        .sidebar-header {
             padding: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-bottom: 1px solid var(--sidebar-border);
+            color: var(--primary-blue);
         }
 
-        /* Admin Bereich Styles */
+        .sidebar-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Einzelnes Fach in der Liste */
+        .subject-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--sidebar-border);
+            cursor: pointer;
+            transition: background 0.2s;
+            color: var(--text-dark);
+            text-decoration: none;
+        }
+
+            .subject-item:hover {
+                background: var(--hover-grey);
+            }
+
+        .subject-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Wichtig für das Abschneiden */
+        }
+
+        .subject-name {
+            font-size: 1rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* Fügt ... hinzu */
+        }
+
+        .chevron {
+            font-size: 1.2rem;
+            color: #adb5bd;
+            margin-left: 10px;
+        }
+
+        /* Admin-Icons in der Sidebar */
+        .admin-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .settings-btn {
+            padding: 5px;
+            border-radius: 4px;
+            opacity: 0.5;
+            transition: 0.2s;
+        }
+
+            .settings-btn:hover {
+                opacity: 1;
+                background: #dee2e6;
+            }
+
+        /* RECHTER BEREICH */
+        .content-area {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            background: linear-gradient(135deg, #1b4f72 0%, #154360 100%);
+        }
+
         .admin-panel {
             background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
+            padding: 25px;
             border-radius: 15px;
             margin-bottom: 30px;
             border: 1px dashed rgba(255,255,255,0.3);
@@ -38,10 +138,10 @@
         }
 
             .admin-panel input {
-                padding: 10px;
+                padding: 12px;
                 border-radius: 5px;
                 border: none;
-                width: 250px;
+                width: 300px;
                 margin-right: 10px;
             }
 
@@ -51,7 +151,6 @@
             border: none;
             cursor: pointer;
             font-weight: bold;
-            transition: 0.2s;
         }
 
         .btn-add {
@@ -63,55 +162,7 @@
                 background: #2ecc71;
             }
 
-        /* Fächer Grid */
-        .subject-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background: rgba(255,255,255,0.1);
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.1);
-            position: relative;
-            transition: transform 0.2s, background 0.2s;
-        }
-
-            .card:hover {
-                background: rgba(255,255,255,0.2);
-                transform: translateY(-5px);
-            }
-
-        .settings-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 18px;
-            opacity: 0.6;
-            padding: 5px;
-            z-index: 10;
-        }
-
-            .settings-icon:hover {
-                opacity: 1;
-                color: #f1c40f;
-            }
-
-        .visibility-badge {
-            font-size: 10px;
-            text-transform: uppercase;
-            background: rgba(0,0,0,0.3);
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-top: 10px;
-            display: inline-block;
-        }
-
-        /* Modal für Benutzerwahl */
+        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -127,79 +178,61 @@
             background: #1b4f72;
             margin: 5% auto;
             padding: 25px;
-            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
             width: 90%;
             max-width: 500px;
-            border-radius: 15px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            color: white;
         }
 
         .user-item {
             display: flex;
             align-items: center;
-            padding: 12px;
+            padding: 10px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer;
-        }
-
-            .user-item:hover {
-                background: rgba(255,255,255,0.1);
-            }
-
-            .user-item input {
-                margin-right: 15px;
-                cursor: pointer;
-                width: 20px;
-                height: 20px;
-            }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .user-name {
-            font-weight: bold;
-        }
-
-        .user-email {
-            font-size: 0.85em;
-            opacity: 0.7;
         }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div style="font-weight: bold; font-size: 1.2rem;">🎓 Informatik</div>
+        <div style="font-weight: bold; font-size: 1.2rem;">🎓 Informatik-Portal</div>
         <div>
             <span id="user-display">Lade...</span> |
             <a href="#" onclick="logout()" style="color:white; text-decoration: none; opacity: 0.8;">Abmelden</a>
         </div>
     </nav>
 
-    <div class="container">
-        <div id="admin-area" class="admin-panel">
-            <h3 style="margin-top:0"> + Neues Fach erstellen</h3>
-            <input type="text" id="new-subject-name" placeholder="+ Name Fach">
-            <button class="btn btn-add" onclick="createNewSubject()">+ Fach hinzufügen</button>
-        </div>
+    <div class="main-layout">
+        <!-- SIDEBAR LINKS -->
+        <aside class="sidebar">
+            <div class="sidebar-header">Fächerübersicht</div>
+            <div class="sidebar-list" id="subjects-list">
+                <!-- Hier kommen die Fächer rein -->
+            </div>
+        </aside>
 
-        <h1>Deine Fächer</h1>
-        <div class="subject-grid" id="subjects"></div>
+        <!-- CONTENT RECHTS -->
+        <main class="content-area">
+            <div id="admin-area" class="admin-panel">
+                <h3 style="margin-top:0">Neues Fach anlegen</h3>
+                <input type="text" id="new-subject-name" placeholder="Name des Fachs...">
+                <button class="btn btn-add" onclick="createNewSubject()">Hinzufügen</button>
+            </div>
+
+            <div id="welcome-message">
+                <h1>Willkommen!</h1>
+                <p>Wähle ein Fach aus der Liste links aus, um die Inhalte zu sehen.</p>
+            </div>
+        </main>
     </div>
 
-    <!-- Auswahlfenster für die E-Mails -->
+    <!-- Modal für Zugriff -->
     <div id="userModal" class="modal">
         <div class="modal-content">
-            <h2 style="margin-top:0">Zugriff verwalten</h2>
-            <p id="modal-subject-name" style="opacity: 0.7; margin-bottom: 20px;"></p>
-            <div id="user-list-container">
-                <!-- Hier werden die Nutzer reingeladen -->
-            </div>
-            <div style="margin-top: 30px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn" style="background: #7f8c8d; color: white;" onclick="closeModal()">Abbrechen</button>
+            <h2>Zugriff verwalten</h2>
+            <p id="modal-subject-name"></p>
+            <div id="user-list-container"></div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn" style="background:#7f8c8d; color:white;" onclick="closeModal()">Abbrechen</button>
                 <button id="save-access-btn" class="btn btn-add">Speichern</button>
             </div>
         </div>
@@ -230,61 +263,61 @@
             const snap = await getDoc(doc(db, "users", user.uid));
             currentUserData = snap.data();
             if (!currentUserData || !currentUserData.isApproved) {
-                alert("Dein Account ist noch nicht freigeschaltet!");
+                alert("Account nicht freigeschaltet!");
                 signOut(auth).then(() => window.location.href = 'login.html');
                 return;
             }
             document.getElementById('user-display').textContent = currentUserData.name + (currentUserData.isAdmin ? " (Admin)" : "");
-            if (currentUserData.isAdmin) {
-                document.getElementById('admin-area').style.display = 'block';
-            }
+            if (currentUserData.isAdmin) document.getElementById('admin-area').style.display = 'block';
             loadSubjects(user.email, currentUserData.isAdmin);
         });
 
         function loadSubjects(userEmail, isAdmin) {
             onSnapshot(collection(db, "subjects"), (snapshot) => {
-                const grid = document.getElementById('subjects');
-                grid.innerHTML = '';
+                const list = document.getElementById('subjects-list');
+                list.innerHTML = '';
                 snapshot.forEach(d => {
                     const sub = d.data();
                     const visibility = sub.visibility || 'alle';
                     const allowedEmails = sub.allowedEmails || [];
-                    let hasAccess = false;
-
-                    if (isAdmin) hasAccess = true;
-                    else if (visibility === 'alle') hasAccess = true;
-                    else if (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase())) hasAccess = true;
+                    let hasAccess = isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()));
 
                     if (hasAccess) {
-                        const div = document.createElement('div');
-                        div.className = 'card';
+                        const item = document.createElement('div');
+                        item.className = 'subject-item';
+                        item.title = sub.name; // Hover-Effekt: Voller Name sichtbar
 
-                        const title = document.createElement('h3');
-                        title.textContent = sub.name;
-                        div.appendChild(title);
+                        const info = document.createElement('div');
+                        info.className = 'subject-info';
+
+                        const name = document.createElement('span');
+                        name.className = 'subject-name';
+                        name.textContent = sub.name;
+                        info.appendChild(name);
+                        item.appendChild(info);
+
+                        const rightSide = document.createElement('div');
+                        rightSide.className = 'admin-actions';
 
                         if (isAdmin) {
-                            const settingsIcon = document.createElement('span');
-                            settingsIcon.className = 'settings-icon';
-                            settingsIcon.textContent = '⚙️';
-                            settingsIcon.style.cursor = 'pointer';
-                            settingsIcon.onclick = (e) => {
+                            const settings = document.createElement('span');
+                            settings.className = 'settings-btn';
+                            settings.textContent = '⚙️';
+                            settings.onclick = (e) => {
                                 e.stopPropagation();
                                 manageVisibility(d.id, sub.name, visibility, allowedEmails);
                             };
-                            div.appendChild(settingsIcon);
-
-                            const badge = document.createElement('span');
-                            badge.className = 'visibility-badge';
-                            badge.textContent = visibility;
-                            div.appendChild(badge);
+                            rightSide.appendChild(settings);
                         }
 
-                        div.onclick = () => {
-                            window.location.href = `fach.html?id=${d.id}`;
-                        };
+                        const chevron = document.createElement('span');
+                        chevron.className = 'chevron';
+                        chevron.textContent = '›';
+                        rightSide.appendChild(chevron);
 
-                        grid.appendChild(div);
+                        item.appendChild(rightSide);
+                        item.onclick = () => window.location.href = `fach.html?id=${d.id}`;
+                        list.appendChild(item);
                     }
                 });
             });
@@ -296,89 +329,59 @@
             if (!name) return;
             try {
                 await addDoc(collection(db, "subjects"), {
-                    name: name,
-                    visibility: 'alle',
-                    allowedEmails: [],
-                    createdAt: new Date()
+                    name: name, visibility: 'alle', allowedEmails: [], createdAt: new Date()
                 });
                 nameInput.value = '';
-            } catch (e) { alert("Fehler: " + e.message); }
+            } catch (e) { alert(e.message); }
         };
 
         window.manageVisibility = async (id, name, currentVis, currentEmails) => {
-            const mode = prompt(`Sichtbarkeit für "${name}" ändern:\n1 = Alle\n2 = Niemand (Nur Admins)\n3 = Benutzerdefiniert (Nutzer wählen)\n4 = Fach LÖSCHEN 🗑️`, "1");
-
+            const mode = prompt(`"${name}" verwalten:\n1 = Alle\n2 = Nur Admins\n3 = Nutzer wählen\n4 = LÖSCHEN 🗑️`, "1");
             if (mode === null) return;
 
-            // OPTION 4: LÖSCHEN
             if (mode === "4") {
-                const confirmDelete = confirm(`Bist du sicher, dass du das Fach "${name}" löschen möchtest?`);
-                if (confirmDelete) {
-                    try {
-                        await deleteDoc(doc(db, "subjects", id));
-                    } catch (e) { alert("Fehler beim Löschen: " + e.message); }
+                if (confirm(`Fach "${name}" wirklich löschen?`)) {
+                    await deleteDoc(doc(db, "subjects", id));
                 }
                 return;
             }
 
             if (mode === "1" || mode === "2") {
-                const newVis = mode === "1" ? 'alle' : 'niemand';
-                await updateDoc(doc(db, "subjects", id), { visibility: newVis, allowedEmails: [] });
+                await updateDoc(doc(db, "subjects", id), {
+                    visibility: mode === "1" ? 'alle' : 'niemand',
+                    allowedEmails: []
+                });
                 return;
             }
 
             if (mode === "3") {
                 const modal = document.getElementById('userModal');
                 const container = document.getElementById('user-list-container');
-                document.getElementById('modal-subject-name').textContent = `Fach: ${name}`;
-                container.innerHTML = '<p>Lade Nutzerliste...</p>';
+                document.getElementById('modal-subject-name').textContent = name;
                 modal.style.display = 'block';
 
                 const usersSnap = await getDocs(collection(db, "users"));
                 container.innerHTML = '';
-
                 usersSnap.forEach(userDoc => {
                     const userData = userDoc.data();
                     const email = (userData.email || "").toLowerCase();
                     if (!email) return;
-
                     const isChecked = currentEmails.includes(email) ? 'checked' : '';
-
                     const div = document.createElement('div');
                     div.className = 'user-item';
-                    div.innerHTML = `
-                                <input type="checkbox" value="${email}" ${isChecked}>
-                                <div class="user-info">
-                                    <span class="user-name">${userData.name || 'Unbekannter Nutzer'}</span>
-                                    <span class="user-email">${email}</span>
-                                </div>
-                            `;
-                    div.onclick = (e) => {
-                        if (e.target.tagName !== 'INPUT') {
-                            const cb = div.querySelector('input');
-                            cb.checked = !cb.checked;
-                        }
-                    };
+                    div.innerHTML = `<input type="checkbox" value="${email}" ${isChecked}> <span>${userData.name} (${email})</span>`;
                     container.appendChild(div);
                 });
 
                 document.getElementById('save-access-btn').onclick = async () => {
-                    const selectedEmails = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
-                    try {
-                        await updateDoc(doc(db, "subjects", id), {
-                            visibility: 'benutzerdefiniert',
-                            allowedEmails: selectedEmails
-                        });
-                        closeModal();
-                    } catch (e) { alert("Fehler beim Speichern: " + e.message); }
+                    const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+                    await updateDoc(doc(db, "subjects", id), { visibility: 'benutzerdefiniert', allowedEmails: selected });
+                    closeModal();
                 };
             }
         };
 
-        window.closeModal = () => {
-            document.getElementById('userModal').style.display = 'none';
-        };
-
+        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
         window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
     </script>
 </body>
