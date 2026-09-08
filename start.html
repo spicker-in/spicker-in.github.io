@@ -34,7 +34,7 @@
             border-radius: 15px;
             margin-bottom: 30px;
             border: 1px dashed rgba(255,255,255,0.3);
-            display: none;
+            display: none; /* Standardmäßig versteckt */
         }
 
             .admin-panel input {
@@ -109,66 +109,11 @@
             margin-top: 10px;
             display: inline-block;
         }
-
-        /* Modal Styles für E-Mail Auswahl */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .modal-content {
-            background: #2c3e50;
-            padding: 30px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 450px;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .user-list {
-            max-height: 300px;
-            overflow-y: auto;
-            margin: 20px 0;
-            background: rgba(0,0,0,0.2);
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        .user-item {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-            .user-item:last-child {
-                border-bottom: none;
-            }
-
-            .user-item input {
-                margin-right: 15px;
-                transform: scale(1.2);
-                cursor: pointer;
-            }
-
-            .user-item label {
-                cursor: pointer;
-                font-size: 14px;
-                flex-grow: 1;
-            }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div style="font-weight: bold; font-size: 1.2rem;">🎓 SpickerSeite</div>
+        <div style="font-weight: bold; font-size: 1.2rem;">🎓 Informatik</div>
         <div>
             <span id="user-display">Lade...</span> |
             <a href="#" onclick="logout()" style="color:white; text-decoration: none; opacity: 0.8;">Abmelden</a>
@@ -176,35 +121,23 @@
     </nav>
 
     <div class="container">
+        <!-- Admin Bereich zum Hinzufügen -->
         <div id="admin-area" class="admin-panel">
-            <h3 style="margin-top:0;">Admin-Panel: Fach hinzufügen</h3>
+            <h3 style="margin-top:0">Admin: Neues Fach erstellen</h3>
             <input type="text" id="new-subject-name" placeholder="Name des Fachs (z.B. Mathe 1)">
             <button class="btn btn-add" onclick="createNewSubject()">+ Fach hinzufügen</button>
         </div>
 
         <h1>Deine Fächer</h1>
-        <div class="subject-grid" id="subjects"></div>
-    </div>
-
-    <!-- Modal für E-Mail Auswahl -->
-    <div id="user-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 id="modal-title" style="margin-top:0;">Zugriff verwalten</h3>
-            <p style="font-size: 0.9rem; opacity: 0.8;">Wähle die Nutzer aus, die dieses Fach sehen dürfen:</p>
-            <div id="user-list" class="user-list">
-                <!-- Nutzer werden hier geladen -->
-            </div>
-            <div style="text-align: right; margin-top: 20px;">
-                <button class="btn" onclick="closeModal()" style="background:#7f8c8d; margin-right:10px;">Abbrechen</button>
-                <button id="save-users-btn" class="btn btn-add">Auswahl speichern</button>
-            </div>
+        <div class="subject-grid" id="subjects">
+            <!-- Fächer werden hier geladen -->
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, getDocs, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -223,21 +156,27 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
+
             const snap = await getDoc(doc(db, "users", user.uid));
             currentUserData = snap.data();
 
             if (!currentUserData || !currentUserData.isApproved) {
-                alert("Dein Account ist noch nicht freigeschaltet.");
+                alert("Dein Account ist noch nicht freigeschaltet!");
                 signOut(auth).then(() => window.location.href = 'login.html');
                 return;
             }
 
             document.getElementById('user-display').textContent = currentUserData.name + (currentUserData.isAdmin ? " (Admin)" : "");
-            if (currentUserData.isAdmin) document.getElementById('admin-area').style.display = 'block';
+
+            // Admin Bereich anzeigen
+            if (currentUserData.isAdmin) {
+                document.getElementById('admin-area').style.display = 'block';
+            }
 
             loadSubjects(user.email, currentUserData.isAdmin);
         });
 
+        // Fächer laden mit Sichtbarkeits-Filter
         function loadSubjects(userEmail, isAdmin) {
             onSnapshot(collection(db, "subjects"), (snapshot) => {
                 const grid = document.getElementById('subjects');
@@ -248,14 +187,23 @@
                     const visibility = sub.visibility || 'alle';
                     const allowedEmails = sub.allowedEmails || [];
 
-                    let hasAccess = isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()));
+                    // Logik: Wer darf das Fach sehen?
+                    let hasAccess = false;
+                    if (isAdmin) {
+                        hasAccess = true; // Admin sieht alles
+                    } else if (visibility === 'alle') {
+                        hasAccess = true; // Jeder sieht es
+                    } else if (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail)) {
+                        hasAccess = true; // Nur bestimmte E-Mails
+                    }
+                    // 'niemand' wird oben durch !isAdmin abgefangen
 
                     if (hasAccess) {
                         const div = document.createElement('div');
                         div.className = 'card';
                         div.innerHTML = `
                                 <h3>${sub.name}</h3>
-                                ${isAdmin ? `<span class="settings-icon" onclick="event.stopPropagation(); window.manageVisibility('${d.id}', '${sub.name}', '${visibility}', ${JSON.stringify(allowedEmails)})">⚙️</span>` : ''}
+                                ${isAdmin ? `<span class="settings-icon" onclick="event.stopPropagation(); manageVisibility('${d.id}', '${sub.name}', '${visibility}', '${allowedEmails.join(', ')}')">⚙️</span>` : ''}
                                 ${isAdmin ? `<span class="visibility-badge">${visibility}</span>` : ''}
                             `;
                         div.onclick = () => window.location.href = `fach.html?id=${d.id}`;
@@ -265,60 +213,56 @@
             });
         }
 
-        window.manageVisibility = async (id, name, currentVis, currentEmails) => {
-            const mode = prompt(`Sichtbarkeit für "${name}" ändern:\n1 = Alle (Standard)\n2 = Niemand (Nur Admins)\n3 = Benutzerdefiniert (Nutzer auswählen)`, "1");
+        // Neues Fach erstellen (Admin)
+        window.createNewSubject = async () => {
+            const nameInput = document.getElementById('new-subject-name');
+            const name = nameInput.value.trim();
+            if (!name) return;
 
-            if (mode === "1") {
-                await updateDoc(doc(db, "subjects", id), { visibility: 'alle', allowedEmails: [] });
-            } else if (mode === "2") {
-                await updateDoc(doc(db, "subjects", id), { visibility: 'niemand', allowedEmails: [] });
-            } else if (mode === "3") {
-                openUserSelectionModal(id, name, currentEmails);
+            try {
+                await addDoc(collection(db, "subjects"), {
+                    name: name,
+                    visibility: 'alle', // Default
+                    allowedEmails: [],
+                    createdAt: new Date()
+                });
+                nameInput.value = '';
+            } catch (e) {
+                alert("Fehler beim Erstellen: " + e.message);
             }
         };
 
-        async function openUserSelectionModal(subjectId, subjectName, currentEmails) {
-            const modal = document.getElementById('user-modal');
-            const list = document.getElementById('user-list');
-            const saveBtn = document.getElementById('save-users-btn');
+        // Sichtbarkeit verwalten (Admin)
+        window.manageVisibility = async (id, name, currentVis, currentEmails) => {
+            const mode = prompt(`Sichtbarkeit für "${name}" ändern:\n1 = Alle (Standard)\n2 = Niemand (Nur Admins)\n3 = Benutzerdefiniert (E-Mails)`, "1");
 
-            document.getElementById('modal-title').textContent = `Zugriff: ${subjectName}`;
-            list.innerHTML = '<p>Lade Nutzerliste...</p>';
-            modal.style.display = 'flex';
+            let newVis = 'alle';
+            let newEmails = [];
+
+            if (mode === "2") {
+                newVis = 'niemand';
+            } else if (mode === "3") {
+                newVis = 'benutzerdefiniert';
+                const emailInput = prompt("Gib die E-Mails ein, die Zugriff haben sollen (mit Komma getrennt):", currentEmails);
+                if (emailInput !== null) {
+                    newEmails = emailInput.split(',').map(e => e.trim().toLowerCase()).filter(e => e !== "");
+                } else {
+                    return; // Abbrechen
+                }
+            } else if (mode !== "1") {
+                return; // Ungültige Eingabe
+            }
 
             try {
-                const usersSnap = await getDocs(collection(db, "users"));
-                list.innerHTML = '';
-
-                usersSnap.forEach(uDoc => {
-                    const u = uDoc.data();
-                    if (!u.email) return;
-
-                    const isChecked = currentEmails.includes(u.email.toLowerCase());
-                    const item = document.createElement('div');
-                    item.className = 'user-item';
-                    item.innerHTML = `
-                            <input type="checkbox" id="chk-${uDoc.id}" value="${u.email.toLowerCase()}" ${isChecked ? 'checked' : ''}>
-                            <label for="chk-${uDoc.id}">${u.name || 'Unbekannt'} <br><small>${u.email}</small></label>
-                        `;
-                    list.appendChild(item);
+                await updateDoc(doc(db, "subjects", id), {
+                    visibility: newVis,
+                    allowedEmails: newEmails
                 });
-
-                saveBtn.onclick = async () => {
-                    const selected = Array.from(list.querySelectorAll('input:checked')).map(cb => cb.value);
-                    await updateDoc(doc(db, "subjects", subjectId), {
-                        visibility: 'benutzerdefiniert',
-                        allowedEmails: selected
-                    });
-                    closeModal();
-                };
             } catch (e) {
-                list.innerHTML = '<p>Fehler beim Laden der Nutzer.</p>';
+                alert("Fehler beim Aktualisieren: " + e.message);
             }
-        }
+        };
 
-        window.closeModal = () => document.getElementById('user-modal').style.display = 'none';
-        window.createNewSubject = async () => { /* ... wie vorher ... */ };
         window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
     </script>
 </body>
