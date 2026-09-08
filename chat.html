@@ -6,13 +6,12 @@
     <title>Chat – Spicker Informatik</title>
     <style>
         :root {
-            --sidebar-bg: #f8f9fa;
-            --sidebar-border: #dee2e6;
-            --text-dark: #333;
+            --sidebar-bg: #111b21;
+            --sidebar-border: #222d34;
             --primary-blue: #1b4f72;
-            --hover-grey: #e9ecef;
             --wa-green: #005c4b;
             --wa-bg: #0b141a;
+            --text-gray: #8696a0;
         }
 
         body {
@@ -30,7 +29,6 @@
         .navbar {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
             padding: 0 40px;
             height: 70px;
             display: flex;
@@ -102,17 +100,26 @@
         /* Sidebar */
         .sidebar {
             width: 350px;
-            background: #111b21;
-            border-right: 1px solid #222d34;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--sidebar-border);
             display: flex;
             flex-direction: column;
         }
 
-        .sidebar-header {
-            padding: 20px;
-            font-weight: bold;
-            border-bottom: 1px solid #222d34;
-            color: #e9edef;
+        .search-container {
+            padding: 10px;
+            border-bottom: 1px solid var(--sidebar-border);
+        }
+
+        .search-bar {
+            width: 100%;
+            background: #202c33;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            outline: none;
+            font-size: 14px;
         }
 
         .contact-list {
@@ -147,6 +154,7 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            flex-shrink: 0;
         }
 
         /* Chat Area */
@@ -205,6 +213,22 @@
             border-top-left-radius: 0;
         }
 
+        .bubble img, .bubble video {
+            max-width: 100%;
+            border-radius: 5px;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .file-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #53bdeb;
+            text-decoration: none;
+            padding: 5px 0;
+        }
+
         .msg-meta {
             display: flex;
             justify-content: flex-end;
@@ -246,9 +270,10 @@
         .btn-icon {
             background: none;
             border: none;
-            color: #8696a0;
-            font-size: 24px;
+            color: var(--text-gray);
+            font-size: 22px;
             cursor: pointer;
+            transition: 0.2s;
         }
 
             .btn-icon:hover {
@@ -257,9 +282,9 @@
 
         .send-btn {
             color: #00a884;
+            font-size: 26px;
         }
 
-        /* Datums-Trenner */
         .date-divider {
             display: flex;
             justify-content: center;
@@ -271,7 +296,7 @@
                 padding: 5px 12px;
                 border-radius: 8px;
                 font-size: 11px;
-                color: #8696a0;
+                color: var(--text-gray);
             }
     </style>
 </head>
@@ -291,9 +316,11 @@
 
     <div class="main-layout">
         <aside class="sidebar">
-            <div class="sidebar-header">Chats</div>
+            <div class="search-container">
+                <input type="text" id="user-search" class="search-bar" placeholder="Nach Nutzern suchen..." oninput="searchUsers(this.value)">
+            </div>
             <div class="contact-list" id="contact-list">
-                <div style="padding: 20px; opacity: 0.5;">Lade Kontakte...</div>
+                <!-- Kontakte werden hier geladen -->
             </div>
         </aside>
 
@@ -301,12 +328,18 @@
             <div class="messages-container" id="messages-container">
                 <div style="text-align: center; margin-top: 100px; opacity: 0.5;">
                     <h3>Willkommen im Chat</h3>
-                    <p>Wähle links einen Kontakt aus, um zu schreiben.</p>
+                    <p>Suche oben nach einem Namen oder wähle einen aktiven Chat aus.</p>
                 </div>
             </div>
 
             <div class="input-area" id="input-area" style="display: none;">
-                <button class="btn-icon">📎</button>
+                <!-- Hidden Inputs für Uploads -->
+                <input type="file" id="file-input" hidden onchange="uploadMedia(this.files[0], 'file')">
+                <input type="file" id="camera-input" hidden accept="image/*" capture="environment" onchange="uploadMedia(this.files[0], 'image')">
+
+                <button class="btn-icon" onclick="document.getElementById('file-input').click()" title="Datei/Galerie">📎</button>
+                <button class="btn-icon" onclick="document.getElementById('camera-input').click()" title="Kamera">📷</button>
+
                 <div class="input-wrap">
                     <textarea id="msg-input" placeholder="Nachricht schreiben..." rows="1" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
                 </div>
@@ -318,7 +351,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, doc, getDoc, getDocs, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -332,10 +366,13 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+        const storage = getStorage(app);
 
         let currentUser = null;
         let activeChatId = null;
         let unsubMessages = null;
+        let allUsers = [];
+        let activeChatPartners = new Set();
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
@@ -358,50 +395,71 @@
             const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
             navContainer.insertBefore(profA, userLink);
 
-            loadContacts(data.isAdmin);
+            await loadInitialData();
         });
 
-        async function loadContacts(isAdmin) {
+        async function loadInitialData() {
+            // 1. Alle User laden (für die Suche)
+            const usersSnap = await getDocs(collection(db, "users"));
+            allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // 2. Aktive Chats finden (wo Nachrichten existieren)
+            // Wir schauen in der Collection "chats" nach Dokumenten, die die eigene UID enthalten
+            const chatsSnap = await getDocs(collection(db, "chats"));
+            chatsSnap.forEach(doc => {
+                if (doc.id.includes(currentUser.uid)) {
+                    const parts = doc.id.split('__');
+                    const partnerId = parts.find(p => p !== currentUser.uid);
+                    if (partnerId) activeChatPartners.add(partnerId);
+                }
+            });
+
+            renderContacts();
+        }
+
+        function renderContacts(filterList = null) {
             const list = document.getElementById('contact-list');
             list.innerHTML = '';
 
-            // 1. Gruppen-Chat für alle
-            const groupItem = createContactItem('group_all', '🏠 Informatik-Gruppe', 'Alle Mitglieder');
-            list.appendChild(groupItem);
+            // Wenn kein Filter (Suche) aktiv ist, zeige nur aktive Chats
+            const displayList = filterList || allUsers.filter(u => activeChatPartners.has(u.id));
 
-            // 2. Alle anderen User laden
-            const usersSnap = await getDocs(collection(db, "users"));
-            usersSnap.forEach(uDoc => {
-                if (uDoc.id !== currentUser.uid) {
-                    const uData = uDoc.data();
-                    // Admin sieht alle, User sieht nur Admin/System (oder alle, je nach Wunsch)
-                    const chatId = [currentUser.uid, uDoc.id].sort().join('__');
-                    const item = createContactItem(chatId, uData.name, 'Privater Chat');
-                    list.appendChild(item);
-                }
+            if (displayList.length === 0 && !filterList) {
+                list.innerHTML = '<div style="padding:20px; opacity:0.5; font-size:13px;">Noch keine aktiven Chats. Nutze die Suche oben!</div>';
+            }
+
+            displayList.forEach(u => {
+                if (u.id === currentUser.uid) return;
+                const div = document.createElement('div');
+                div.className = 'contact-item';
+                div.onclick = () => openChat(u.id, u.name);
+                div.innerHTML = `
+                        <div class="avatar">${u.name.charAt(0).toUpperCase()}</div>
+                        <div style="flex:1">
+                            <div style="font-weight:bold">${u.name}</div>
+                            <div style="font-size:12px; color:var(--text-gray)">${u.isAdmin ? 'Admin' : 'Student'}</div>
+                        </div>
+                    `;
+                list.appendChild(div);
             });
         }
 
-        function createContactItem(id, name, sub) {
-            const div = document.createElement('div');
-            div.className = 'contact-item';
-            div.onclick = () => openChat(id, name);
-            div.innerHTML = `
-                    <div class="avatar">${name.charAt(0).toUpperCase()}</div>
-                    <div style="flex:1">
-                        <div style="font-weight:bold">${name}</div>
-                        <div style="font-size:12px; opacity:0.5">${sub}</div>
-                    </div>
-                `;
-            return div;
-        }
+        window.searchUsers = (val) => {
+            const term = val.toLowerCase().trim();
+            if (!term) {
+                renderContacts(); // Zurück zu aktiven Chats
+                return;
+            }
+            const filtered = allUsers.filter(u => u.name.toLowerCase().includes(term));
+            renderContacts(filtered);
+        };
 
-        function openChat(chatId, name) {
-            activeChatId = chatId;
+        function openChat(partnerId, name) {
+            activeChatId = [currentUser.uid, partnerId].sort().join('__');
             document.getElementById('input-area').style.display = 'flex';
             if (unsubMessages) unsubMessages();
 
-            const q = query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc"));
+            const q = query(collection(db, "chats", activeChatId, "messages"), orderBy("createdAt", "asc"));
             unsubMessages = onSnapshot(q, (snap) => {
                 const container = document.getElementById('messages-container');
                 container.innerHTML = '';
@@ -411,7 +469,6 @@
                     const m = mDoc.data();
                     if (!m.createdAt) return;
 
-                    // Datums-Trenner
                     const date = m.createdAt.toDate().toLocaleDateString();
                     if (date !== lastDate) {
                         const div = document.createElement('div');
@@ -426,10 +483,15 @@
                     row.className = `msg-row ${isOwn ? 'own' : ''}`;
                     const time = m.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+                    let content = `<div>${m.text || ''}</div>`;
+                    if (m.type === 'image') content = `<img src="${m.url}">`;
+                    if (m.type === 'video') content = `<video src="${m.url}" controls></video>`;
+                    if (m.type === 'file') content = `<a href="${m.url}" target="_blank" class="file-link">📄 ${m.fileName}</a>`;
+
                     row.innerHTML = `
                             <div class="bubble">
                                 ${!isOwn ? `<div style="font-size:11px; color:#53bdeb; font-weight:bold; margin-bottom:4px">${m.senderName}</div>` : ''}
-                                <div>${m.text}</div>
+                                ${content}
                                 <div class="msg-meta">
                                     <span>${time}</span>
                                     ${isOwn ? '<span style="color:#53bdeb">✓✓</span>' : ''}
@@ -449,12 +511,38 @@
 
             await addDoc(collection(db, "chats", activeChatId, "messages"), {
                 text: text,
+                type: 'text',
                 senderUid: currentUser.uid,
                 senderName: document.getElementById('user-display').textContent,
                 createdAt: serverTimestamp()
             });
             input.value = '';
             input.style.height = 'auto';
+        };
+
+        window.uploadMedia = async (file, typeHint) => {
+            if (!file || !activeChatId) return;
+            const statusArea = document.getElementById('messages-container');
+
+            try {
+                const fileRef = ref(storage, `chats/${activeChatId}/${Date.now()}_${file.name}`);
+                const snap = await uploadBytes(fileRef, file);
+                const url = await getDownloadURL(snap.ref);
+
+                let type = typeHint;
+                if (file.type.startsWith('video/')) type = 'video';
+                if (file.type.startsWith('image/')) type = 'image';
+                if (typeHint === 'file' && !file.type.startsWith('image') && !file.type.startsWith('video')) type = 'file';
+
+                await addDoc(collection(db, "chats", activeChatId, "messages"), {
+                    url: url,
+                    type: type,
+                    fileName: file.name,
+                    senderUid: currentUser.uid,
+                    senderName: document.getElementById('user-display').textContent,
+                    createdAt: serverTimestamp()
+                });
+            } catch (e) { alert("Upload fehlgeschlagen: " + e.message); }
         };
 
         window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
