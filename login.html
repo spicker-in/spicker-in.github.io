@@ -352,7 +352,8 @@
             emailjs.send("service_7twg9kk", "template_fygcnxh", {
                 to_email: email,
                 to_name: name,
-                passcode: generatedCode
+                passcode: generatedCode,
+                login_link: "https://spicker-in.github.io/login.html"
             }).then(() => {
                 switchView('code');
                 showStatus("4-stelliger Code wurde an " + email + " gesendet.");
@@ -411,7 +412,7 @@
 
                 showStatus("Sende E-Mail...");
 
-                // Link für den Button in der E-Mail (z. B. Deine GitHub Pages Seite)
+                // Link für den Button in der E-Mail
                 const resetLink = "https://spicker-in.github.io/login.html";
 
                 emailjs.send("service_7twg9kk", "template_ygaqm3e", {
