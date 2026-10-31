@@ -30,7 +30,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Funktionen global verfügbar machen
         window._auth = auth;
         window._db = db;
         window._firebaseFns = {
@@ -65,37 +64,14 @@
         }
 
         h1 {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             font-size: 28px;
             letter-spacing: 1px;
         }
 
-        .tab-switcher {
-            display: flex;
-            background: rgba(0,0,0,0.2);
-            border-radius: 50px;
-            padding: 5px;
-            margin-bottom: 20px;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 50px;
-            background: transparent;
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-
-            .tab-btn.active {
-                background: #5dade2;
-            }
-
         .input-group {
             margin-bottom: 15px;
+            text-align: left;
         }
 
         input {
@@ -123,7 +99,7 @@
             color: white;
             font-weight: bold;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 16px;
             transition: 0.3s;
         }
@@ -149,30 +125,44 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 10px;
-            font-size: 13px;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 14px;
         }
 
-        .forgot-link {
+        .action-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .link-btn {
             color: #a8d8ea;
             text-decoration: none;
             cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 14px;
+            padding: 0;
         }
 
-            .forgot-link:hover {
+            .link-btn:hover {
                 text-decoration: underline;
             }
 
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
             cursor: pointer;
         }
 
             .checkbox-group input {
                 width: auto;
                 cursor: pointer;
+                height: 16px;
+                width: 16px;
             }
     </style>
 </head>
@@ -181,78 +171,105 @@
     <div class="login-box">
         <h1>🎓 SpickerSeite</h1>
 
-        <div class="tab-switcher">
-            <button class="tab-btn active" id="t-login" onclick="switchTab('login')">Login</button>
-            <button class="tab-btn" id="t-reg" onclick="switchTab('reg')">Registrieren</button>
-        </div>
-
-        <!-- Status Anzeige -->
+        <!-- Status / Fehlermeldungen -->
         <div id="status-msg" class="status-msg"></div>
 
         <!-- LOGIN FORM -->
         <div id="f-login">
             <div class="input-group">
-                <input type="email" id="l-email" placeholder="E-Mail" onkeydown="handleEnter(event, 'l-pass')">
+                <input type="text" id="l-email" placeholder="username / email-adresse" onkeydown="handleEnter(event, 'l-pass')">
             </div>
             <div class="input-group">
-                <input type="password" id="l-pass" placeholder="Passwort" onkeydown="handleEnter(event, 'LOGIN')">
+                <input type="password" id="l-pass" placeholder="passwort" onkeydown="handleEnter(event, 'LOGIN')">
             </div>
+
             <div class="options-row">
                 <label class="checkbox-group">
                     <input type="checkbox" id="l-remember" checked> Angemeldet bleiben
                 </label>
-                <span class="forgot-link" onclick="doForgotPassword()">Passwort vergessen?</span>
             </div>
+
             <button class="btn" onclick="doLogin()">Anmelden</button>
+
+            <div class="action-links">
+                <button class="link-btn" onclick="doForgotPassword()">passwort vergessen</button>
+                <button class="link-btn" onclick="switchView('reg')">registrieren</button>
+            </div>
         </div>
 
-        <!-- REGISTER FORM -->
+        <!-- REGISTER FORM (Schritt 1: Daten eingeben & Code senden) -->
         <div id="f-reg" style="display:none">
+            <h3 style="margin-top:0; font-size:18px; color:#a8d8ea;">Registrierung</h3>
             <div class="input-group">
-                <input type="text" id="r-name" placeholder="Vollständiger Name" onkeydown="handleEnter(event, 'r-email')">
+                <input type="text" id="r-name" placeholder="Vollständiger Name">
             </div>
             <div class="input-group">
-                <input type="email" id="r-email" placeholder="E-Mail Adresse" onkeydown="handleEnter(event, 'r-pass')">
+                <input type="email" id="r-email" placeholder="E-Mail-Adresse">
             </div>
             <div class="input-group">
-                <input type="password" id="r-pass" placeholder="Passwort (min. 6 Zeichen)" onkeydown="handleEnter(event, 'REGISTER')">
+                <input type="password" id="r-pass" placeholder="Passwort (min. 6 Zeichen)">
             </div>
-            <button class="btn" onclick="doRegister()">Registrierung anfragen</button>
+            <button class="btn" onclick="startRegistration()">6-stelligen Code senden</button>
+
+            <div class="action-links" style="justify-content: center; margin-top: 15px;">
+                <button class="link-btn" onclick="switchView('login')">Zurück zum Login</button>
+            </div>
+        </div>
+
+        <!-- CODE VERIFY FORM (Schritt 2: 6-stelligen Code bestätigen) -->
+        <div id="f-code" style="display:none">
+            <h3 style="margin-top:0; font-size:18px; color:#a8d8ea;">Code bestätigen</h3>
+            <p style="font-size:13px; opacity:0.8; margin-bottom:15px;">Wir haben dir einen 6-stelligen Bestätigungscode gesendet.</p>
+            <div class="input-group">
+                <input type="text" id="r-code-input" placeholder="123456" maxlength="6" style="text-align: center; letter-spacing: 4px; font-size: 20px;">
+            </div>
+            <button class="btn" onclick="verifyCodeAndRegister()">Code bestätigen & Anfragen</button>
         </div>
     </div>
 
     <script>
         const SUPERADMIN = 'julianknuhr92@gmail.com';
+        let temporaryUserData = null;
+        let generatedCode = '';
 
-        // Enter-Taste Steuerung
         function handleEnter(e, action) {
             if (e.key === 'Enter') {
                 if (action === 'LOGIN') doLogin();
-                else if (action === 'REGISTER') doRegister();
                 else document.getElementById(action).focus();
             }
         }
 
-        // Tab Wechsel
-        function switchTab(t) {
-            document.getElementById('f-login').style.display = t === 'login' ? 'block' : 'none';
-            document.getElementById('f-reg').style.display = t === 'reg' ? 'block' : 'none';
-            document.getElementById('t-login').classList.toggle('active', t === 'login');
-            document.getElementById('t-reg').classList.toggle('active', t === 'reg');
+        // Zwischen Ansichten umschalten (login, reg, code)
+        function switchView(view) {
+            document.getElementById('f-login').style.display = view === 'login' ? 'block' : 'none';
+            document.getElementById('f-reg').style.display = view === 'reg' ? 'block' : 'none';
+            document.getElementById('f-code').style.display = view === 'code' ? 'block' : 'none';
+            hideStatus();
+        }
+
+        function showStatus(text, isError = false) {
+            const el = document.getElementById('status-msg');
+            el.textContent = text;
+            el.style.display = 'block';
+            el.style.background = isError ? 'rgba(231, 76, 60, 0.2)' : 'rgba(46, 204, 113, 0.2)';
+            el.style.color = isError ? '#ff9999' : '#99ff99';
+            el.style.borderColor = isError ? 'rgba(231, 76, 60, 0.4)' : 'rgba(46, 204, 113, 0.4)';
+        }
+
+        function hideStatus() {
             document.getElementById('status-msg').style.display = 'none';
         }
 
-        // LOGIN FUNKTION
+        // LOGIN
         async function doLogin() {
             const email = document.getElementById('l-email').value.trim();
             const pass = document.getElementById('l-pass').value;
             const remember = document.getElementById('l-remember').checked;
 
-            if (!email || !pass) return alert("Bitte E-Mail und Passwort eingeben!");
+            if (!email || !pass) return showStatus("Bitte E-Mail und Passwort eingeben!", true);
 
             try {
                 const f = window._firebaseFns;
-                // Sitzung speichern oder nicht
                 await f.setPersistence(window._auth, remember ? f.browserLocalPersistence : f.browserSessionPersistence);
 
                 const userCred = await f.signInWithEmailAndPassword(window._auth, email, pass);
@@ -264,89 +281,88 @@
                 } else if (data && data.isApproved) {
                     window.location.href = 'start.html';
                 } else {
-                    alert("Dein Account wurde noch nicht von Julian freigeschaltet.");
+                    showStatus("Dein Account wurde noch nicht von Julian freigeschaltet.", true);
                 }
             } catch (e) {
-                alert("Login fehlgeschlagen. Bitte Daten prüfen.");
+                showStatus("Login fehlgeschlagen. Bitte Daten prüfen.", true);
             }
         }
 
-        // REGISTRIERUNGS FUNKTION
-        async function doRegister() {
+        // SCHRITT 1: Registrierungsdaten prüfen & 6-stelligen Code generieren
+        async function startRegistration() {
             const name = document.getElementById('r-name').value.trim();
             const email = document.getElementById('r-email').value.trim();
             const pass = document.getElementById('r-pass').value;
 
-            if (!name || !email || !pass) return alert("Bitte alle Felder ausfüllen!");
-            if (pass.length < 6) return alert("Das Passwort muss mindestens 6 Zeichen haben.");
+            if (!name || !email || !pass) return showStatus("Bitte alle Felder ausfüllen!", true);
+            if (pass.length < 6) return showStatus("Das Passwort muss mindestens 6 Zeichen haben.", true);
+
+            // 6-stelligen Code generieren (z.B. "482910")
+            generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
+            temporaryUserData = { name, email, pass };
+
+            // In einer echten App würdest du hier den Code per E-Mail-API (z.B. EmailJS, SendGrid oder Firebase Extension) senden.
+            // Für den Test geben wir ihn dir testweise als Hinweis aus:
+            console.log("Dein 6-stelliger Bestätigungscode:", generatedCode);
+            alert("Simulierter E-Mail-Versand!\nDein 6-stelliger Code lautet: " + generatedCode);
+
+            switchView('code');
+            showStatus("Code wurde an " + email + " gesendet.");
+        }
+
+        // SCHRITT 2: Code prüfen & Account anlegen (mit Status isApproved = false für Admin)
+        async function verifyCodeAndRegister() {
+            const enteredCode = document.getElementById('r-code-input').value.trim();
+
+            if (enteredCode !== generatedCode) {
+                return showStatus("Falscher Code! Bitte überprüfe deine Eingabe.", true);
+            }
 
             try {
                 const f = window._firebaseFns;
+                const { name, email, pass } = temporaryUserData;
+
+                // Account in Firebase Authentication erstellen
                 const userCred = await f.createUserWithEmailAndPassword(window._auth, email, pass);
 
+                // In Firestore speichern (isApproved: false, damit Admin zustimmen muss)
                 await f.setDoc(f.doc(window._db, "users", userCred.user.uid), {
-                    name, email, isApproved: false, isAdmin: false, createdAt: f.serverTimestamp()
+                    name,
+                    email,
+                    isApproved: false,
+                    isAdmin: false,
+                    createdAt: f.serverTimestamp()
                 });
 
-                alert("Registrierung erfolgreich! Julian schaltet dich bald frei.");
-                switchTab('login');
+                alert("E-Mail erfolgreich bestätigt! Dein Account wartet nun auf die Freigabe durch den Admin.");
+                switchView('login');
+                showStatus("Registrierung erfolgreich! Bitte warte auf Admin-Freigabe.");
             } catch (e) {
-                alert("Fehler: " + e.message);
+                showStatus("Fehler: " + e.message, true);
             }
         }
 
-
-
-
-
-
-
-
-
+        // PASSWORT VERGESSEN
         async function doForgotPassword() {
             const email = document.getElementById('l-email').value.trim();
-            const statusEl = document.getElementById('status-msg');
-
             if (!email) {
-                alert("Bitte gib zuerst deine E-Mail Adresse in das Feld ein.");
+                alert("Bitte gib zuerst deine E-Mail-Adresse im Login-Feld ein.");
                 document.getElementById('l-email').focus();
                 return;
             }
 
             try {
                 const f = window._firebaseFns;
-
-                // Firebase Auth prüft die E-Mail und verschickt den Reset-Link
                 await f.sendPasswordResetEmail(window._auth, email);
-
-                if (statusEl) {
-                    statusEl.textContent = `Eine E-Mail zum Zurücksetzen wurde an ${email} versendet.`;
-                    statusEl.style.display = 'block';
-                    setTimeout(() => { statusEl.style.display = 'none'; }, 10000);
-                }
+                showStatus(`Eine E-Mail zum Zurücksetzen wurde an ${email} versendet.`);
             } catch (e) {
-                console.error("Firebase Fehler:", e);
-                // Gibt dem Nutzer eine verständliche Fehlermeldung
                 if (e.code === 'auth/user-not-found') {
-                    alert("Zu dieser E-Mail-Adresse existiert kein Benutzerkonto.");
-                } else if (e.code === 'auth/invalid-email') {
-                    alert("Bitte gib eine gültige E-Mail-Adresse ein.");
+                    showStatus("Zu dieser E-Mail-Adresse existiert kein Benutzerkonto.", true);
                 } else {
-                    alert("Fehler beim Senden: " + e.message);
+                    showStatus("Fehler beim Senden: " + e.message, true);
                 }
             }
         }
-
-
-
-
-
-
-
-
-
-
-
     </script>
 </body>
 </html>
