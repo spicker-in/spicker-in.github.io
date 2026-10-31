@@ -43,7 +43,7 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <script type="text/javascript">
         (function () {
-            emailjs.init("DEIN_PUBLIC_KEY"); // Trage hier deinen EmailJS Public Key ein
+            emailjs.init("1OMejyyUkbzLcwj7t");
         })();
     </script>
 
@@ -251,7 +251,7 @@
         <!-- FORGOT PASSWORD CODE FORM (Schritt 2: 4-stelligen Code eingeben) -->
         <div id="f-forgot-code" style="display:none">
             <h3 style="margin-top:0; font-size:18px; color:#a8d8ea;">Code eingeben</h3>
-            <p style="font-size:13px; opacity:0.8; margin-bottom:15px;">Gib hier deinen 4-stelligen Code ein (oder klicke auf den Button in der E-Mail).</p>
+            <p style="font-size:13px; opacity:0.8; margin-bottom:15px;">Gib hier deinen 4-stelligen Code ein (oder nutze den Button in der E-Mail).</p>
             <div class="input-group">
                 <input type="text" id="fo-code-input" placeholder="1234" maxlength="4" style="text-align: center; letter-spacing: 4px; font-size: 20px;">
             </div>
@@ -411,8 +411,7 @@
 
                 showStatus("Sende E-Mail...");
 
-                // Firebase generiert einen offiziellen Link für den Button
-                // (Alternativ kannst du hier auch eine feste URL eintragen)
+                // Link für den Button in der E-Mail (z. B. Deine GitHub Pages Seite)
                 const resetLink = "https://spicker-in.github.io/login.html";
 
                 emailjs.send("service_7twg9kk", "template_ygaqm3e", {
