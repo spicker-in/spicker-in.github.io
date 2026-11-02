@@ -145,22 +145,28 @@
             font-weight: 500;
         }
 
+        .subject-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .chevron {
             font-size: 1.2rem;
             color: #adb5bd;
-            margin-left: 10px;
         }
 
         .settings-icon {
             font-size: 16px;
-            opacity: 0.3;
+            opacity: 0.4;
             padding: 5px;
             transition: 0.2s;
+            cursor: pointer;
         }
 
             .settings-icon:hover {
                 opacity: 1;
-                color: #f39c12;
+                color: #d35400;
                 transform: rotate(45deg);
             }
 
@@ -256,8 +262,6 @@
             <a href="start.html" style="border-bottom: 2px solid white;">Start</a>
             <a href="chat.html">Chat 💬</a>
 
-            <!-- Dynamische Links (Hilfe, Admin, Prof) werden per JS hier eingefügt -->
-
             <a href="profil.html" id="user-link-wrapper" class="user-link">
                 <span id="user-display" class="user-display">Lade...</span>
             </a>
@@ -332,17 +336,22 @@
             const navContainer = document.getElementById('nav-links-container');
             const userLinkWrapper = document.getElementById('user-link-wrapper');
 
-            // Navbar Links dynamisch aufbauen
             if (currentUserData.isAdmin) {
-                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
+                const adminA = document.createElement('a');
+                adminA.href = 'admin.html';
+                adminA.textContent = 'Admin';
                 navContainer.insertBefore(adminA, userLinkWrapper);
                 document.getElementById('admin-area').style.display = 'block';
             } else {
-                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
+                const helpA = document.createElement('a');
+                helpA.href = 'help.html';
+                helpA.textContent = 'Hilfe ❓';
                 navContainer.insertBefore(helpA, userLinkWrapper);
             }
 
-            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
+            const profA = document.createElement('a');
+            profA.href = 'prof.html';
+            profA.textContent = 'Professoren';
             navContainer.insertBefore(profA, userLinkWrapper);
 
             loadSubjects(user.email, currentUserData.isAdmin);
@@ -362,10 +371,17 @@
                     if (hasAccess) {
                         const item = document.createElement('div');
                         item.className = 'subject-item';
+
+                        // Zahnrad wird NUR im HTML gerendert, wenn der User Admin ist!
+                        let settingsHTML = '';
+                        if (isAdmin) {
+                            settingsHTML = `<span class="settings-icon" title="Einstellungen" onclick="event.stopPropagation(); window.manageVisibility('subjects', '${d.id}', '${encodeURIComponent(sub.name)}', '${visibility}')">⚙️</span>`;
+                        }
+
                         item.innerHTML = `
                                 <span class="subject-name">${sub.name}</span>
-                                <div style="display:flex; align-items:center;">
-                                    ${isAdmin ? `<span class="settings-icon" onclick="event.stopPropagation(); manageVisibility('subjects', '${d.id}', '${sub.name}', '${visibility}', ${JSON.stringify(allowedEmails)})">⚙️</span>` : ''}
+                                <div class="subject-actions">
+                                    ${settingsHTML}
                                     <span class="chevron">›</span>
                                 </div>
                             `;
@@ -376,7 +392,15 @@
             });
         }
 
-        window.manageVisibility = async (coll, id, name, currentVis, currentEmails) => {
+        // Global zugänglich machen für den onclick-Handler im HTML
+        window.manageVisibility = async (coll, id, encodedName, currentVis) => {
+            const name = decodeURIComponent(encodedName);
+
+            // Aktuelle Daten frisch holen, um aktuelle AllowedEmails zu haben
+            const docSnap = await getDoc(doc(db, coll, id));
+            const currentData = docSnap.exists() ? docSnap.data() : {};
+            const currentEmails = currentData.allowedEmails || [];
+
             const mode = prompt(`Sichtbarkeit für "${name}" ändern:\n1 = Alle\n2 = Nur Admins\n3 = Benutzerdefiniert\n4 = Fach LÖSCHEN 🗑️`, "1");
             if (!mode) return;
 
@@ -409,7 +433,12 @@
                     const div = document.createElement('div');
                     div.className = 'user-item';
                     div.innerHTML = `<input type="checkbox" value="${email}" ${currentEmails.includes(email) ? 'checked' : ''}> <span>${u.name} (${email})</span>`;
-                    div.onclick = (e) => { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
+                    div.onclick = (e) => {
+                        if (e.target.tagName !== 'INPUT') {
+                            const cb = div.querySelector('input');
+                            cb.checked = !cb.checked;
+                        }
+                    };
                     container.appendChild(div);
                 });
 
@@ -434,7 +463,6 @@
                 });
                 nameInput.value = '';
             } catch (e) { alert(e.message); }
-            
         };
 
         window.closeModal = () => document.getElementById('userModal').style.display = 'none';

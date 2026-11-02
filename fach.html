@@ -87,6 +87,8 @@
             margin: 40px auto;
             padding: 0 20px;
             flex: 1;
+            box-sizing: border-box;
+            width: 100%;
         }
 
         .glass-card {
@@ -176,7 +178,7 @@
                 transform: scale(1.2);
             }
 
-        /* --- MODAL STYLES (WIE START.HTML) --- */
+        /* --- MODAL STYLES --- */
         .modal {
             display: none;
             position: fixed;
@@ -251,8 +253,8 @@
             <div class="upload-box">
                 <h3>Altklausur oder Foto hochladen</h3>
                 <div class="upload-controls">
-                    <input type="file" id="upload-file" hidden onchange="handleUpload(this.files[0])">
-                    <input type="file" id="camera-file" hidden accept="image/*" capture="environment" onchange="handleUpload(this.files[0])">
+                    <input type="file" id="upload-file" hidden onchange="window.handleUpload(this.files[0])">
+                    <input type="file" id="camera-file" hidden accept="image/*" capture="environment" onchange="window.handleUpload(this.files[0])">
                     <button class="btn-upload" onclick="document.getElementById('upload-file').click()">📎 Datei wählen</button>
                     <span class="camera-icon" onclick="document.getElementById('camera-file').click()" title="Foto aufnehmen">📷</span>
                 </div>
@@ -267,7 +269,7 @@
             <h2 id="modal-title">Zugriff verwalten</h2>
             <div id="user-list-container"></div>
             <div style="margin-top: 25px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn-modal" style="background:#7f8c8d; color:white;" onclick="closeModal()">Abbrechen</button>
+                <button class="btn-modal" style="background:#7f8c8d; color:white;" onclick="window.closeModal()">Abbrechen</button>
                 <button id="save-access-btn" class="btn-modal" style="background:#27ae60; color:white;">Speichern</button>
             </div>
         </div>
@@ -332,7 +334,9 @@
                 list.innerHTML = "";
                 if (snapshot.empty) {
                     list.innerHTML = '<p style="text-align:center; opacity:0.5;">Noch keine Klausuren hochgeladen.</p>';
+                    return;
                 }
+
                 snapshot.forEach((d) => {
                     const exam = d.data();
                     const visibility = exam.visibility || 'alle';
@@ -340,7 +344,6 @@
 
                     if (isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()))) {
 
-                        // --- STATUS ANZEIGE ---
                         let statusText = "";
                         let statusColor = "rgba(255,255,255,0.5)";
 
@@ -350,23 +353,29 @@
                             statusText = "🔒 Nur Admins";
                             statusColor = "#e74c3c";
                         } else if (visibility === 'benutzerdefiniert') {
-                            statusText = `👥 ${allowedEmails.length > 0 ? allowedEmails.join(', ') : 'Bestimmte User'}`;
+                            statusText = `👥 Benutzerdefiniert`;
                             statusColor = "#3498db";
+                        }
+
+                        // Zahnrad wird NUR für Admins gerendert
+                        let settingsHTML = '';
+                        if (isAdmin) {
+                            settingsHTML = `<span class="settings-icon" title="Einstellungen" onclick="event.stopPropagation(); window.manageVisibility('exams', '${d.id}', '${encodeURIComponent(exam.fileName)}', '${visibility}', '${exam.storagePath || ''}')">⚙️</span>`;
                         }
 
                         const item = document.createElement('div');
                         item.className = 'exam-item';
                         item.innerHTML = `
-                                    <div style="display:flex; flex-direction:column; gap:4px;">
-                                        <span style="font-weight:500;">📄 ${exam.fileName}</span>
-                                        <span style="font-size: 0.75rem; color: ${statusColor}; font-weight: bold;">
-                                            ${statusText}
-                                        </span>
-                                    </div>
-                                    <div style="display:flex; align-items:center; gap:15px;">
-                                        <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Download</a>
-                                        ${isAdmin ? `<span class="settings-icon" onclick="manageVisibility('exams', '${d.id}', '${exam.fileName}', '${visibility}', ${JSON.stringify(allowedEmails)}, '${exam.storagePath || ''}')">⚙️</span>` : ''}
-                                    </div>`;
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <span style="font-weight:500;">📄 ${exam.fileName}</span>
+                                    <span style="font-size: 0.75rem; color: ${statusColor}; font-weight: bold;">
+                                        ${statusText}
+                                    </span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Öffnen</a>
+                                    ${settingsHTML}
+                                </div>`;
                         list.appendChild(item);
                     }
                 });
@@ -383,35 +392,62 @@
                 const { error } = await supabase.storage.from('exams').upload(filePath, file);
                 if (error) throw error;
                 const { data: urlData } = supabase.storage.from('exams').getPublicUrl(filePath);
+
                 await addDoc(collection(db, "exams"), {
-                    subjectId, fileName: file.name, url: urlData.publicUrl, storagePath: filePath,
-                    status: 'approved', visibility: 'alle', allowedEmails: [],
-                    uploadedBy: auth.currentUser.uid, createdAt: serverTimestamp()
+                    subjectId,
+                    fileName: file.name,
+                    url: urlData.publicUrl,
+                    storagePath: filePath,
+                    visibility: 'alle',
+                    allowedEmails: [],
+                    uploadedBy: auth.currentUser.uid,
+                    createdAt: serverTimestamp()
                 });
-                status.textContent = "✅ Fertig!";
+
+                status.textContent = "✅ Erfolgreich hochgeladen!";
                 setTimeout(() => status.textContent = "", 3000);
-            } catch (e) { status.textContent = "❌ Fehler: " + e.message; }
+            } catch (e) {
+                status.textContent = "❌ Fehler: " + e.message;
+            }
         };
 
-        window.manageVisibility = async (coll, id, name, currentVis, currentEmails, storagePath) => {
+        window.manageVisibility = async (coll, id, encodedName, currentVis, storagePath) => {
+            const name = decodeURIComponent(encodedName);
+
+            // Aktuelle Daten frisch aus Firestore holen
+            const docSnap = await getDoc(doc(db, coll, id));
+            const currentData = docSnap.exists() ? docSnap.data() : {};
+            const currentEmails = currentData.allowedEmails || [];
+
             const mode = prompt(
                 `Aktion für "${name}":\n` +
                 `1 = Alle (Jeder kann es sehen)\n` +
-                `2 = Nur Admins (Gesperrt für Studenten)\n` +
+                `2 = Nur Admins (Gesperrt)\n` +
                 `3 = Benutzerdefiniert (Nutzer auswählen)\n` +
                 `4 = LÖSCHEN 🗑️`,
                 currentVis === 'alle' ? "1" : (currentVis === 'niemand' ? "2" : "3")
             );
+            if (!mode) return;
 
             if (mode === "4") {
                 if (confirm(`Möchtest du "${name}" wirklich unwiderruflich löschen?`)) {
-                    if (storagePath) await supabase.storage.from('exams').remove([storagePath]);
+                    if (storagePath) {
+                        await supabase.storage.from('exams').remove([storagePath]);
+                    }
                     await deleteDoc(doc(db, coll, id));
                 }
-            } else if (mode === "1" || mode === "2") {
-                await updateDoc(doc(db, coll, id), { visibility: mode === "1" ? 'alle' : 'niemand', allowedEmails: [] });
-            } else if (mode === "3") {
-                // MODAL ÖFFNEN (WIE IN START.HTML)
+                return;
+            }
+
+            if (mode === "1" || mode === "2") {
+                await updateDoc(doc(db, coll, id), {
+                    visibility: mode === "1" ? 'alle' : 'niemand',
+                    allowedEmails: []
+                });
+                return;
+            }
+
+            if (mode === "3") {
                 const modal = document.getElementById('userModal');
                 const container = document.getElementById('user-list-container');
                 document.getElementById('modal-title').textContent = `Zugriff für "${name}"`;
@@ -426,7 +462,12 @@
                     const div = document.createElement('div');
                     div.className = 'user-item';
                     div.innerHTML = `<input type="checkbox" value="${email}" ${currentEmails.includes(email) ? 'checked' : ''}> <span>${u.name} (${email})</span>`;
-                    div.onclick = (e) => { if (e.target.tagName !== 'INPUT') { const cb = div.querySelector('input'); cb.checked = !cb.checked; } };
+                    div.onclick = (e) => {
+                        if (e.target.tagName !== 'INPUT') {
+                            const cb = div.querySelector('input');
+                            cb.checked = !cb.checked;
+                        }
+                    };
                     container.appendChild(div);
                 });
 
@@ -436,7 +477,7 @@
                         visibility: 'benutzerdefiniert',
                         allowedEmails: selected
                     });
-                    closeModal();
+                    window.closeModal();
                 };
             }
         };
