@@ -299,14 +299,20 @@
         // ---------- Drive-Hilfsfunktionen ----------
         async function callDrive(payload) {
             const idToken = await auth.currentUser.getIdToken();
-            // text/plain vermeidet CORS-Preflight bei Apps Script
             const res = await fetch(DRIVE_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ ...payload, idToken })
             });
-            const data = await res.json();
-            if (!data.ok) throw new Error(data.error);
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                // Apps Script hat keine JSON-Antwort geliefert (z. B. Anmeldeseite oder Fehlerseite)
+                throw new Error(`Keine JSON-Antwort (HTTP ${res.status}): ${text.slice(0, 200)}`);
+            }
+            if (!data.ok) throw new Error(`Apps Script: ${data.error}`);
             return data;
         }
 
