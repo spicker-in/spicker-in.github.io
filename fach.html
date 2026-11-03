@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Fachdetails – Spicker Informatik</title>
-    <!-- Supabase Bibliothek -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary-blue: #1b4f72;
@@ -280,9 +278,8 @@
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const SUPABASE_URL = 'https://jdbcrsczsjkjjvcbesbb.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkYmNyc2N6c2pramp2Y2Jlc2JiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NjY3NTgsImV4cCI6MjEwNDQ0Mjc1OH0.pa2msgQ6h042iKsAia9rRqSsL6kmwSbuWv9l38xUZ2w';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Google Apps Script Web-App (Drive-Backend)
+        const DRIVE_API_URL = 'https://script.google.com/macros/s/AKfycbw_clm-Ei6erUblk_rHP2fj1Q3x62BpZXBhYwLMGNUgwdjMABr3Jv953EWvWwchfKm2/exec';
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -299,6 +296,40 @@
         const urlParams = new URLSearchParams(window.location.search);
         const subjectId = urlParams.get('id');
 
+        // ---------- Drive-Hilfsfunktionen ----------
+        async function callDrive(payload) {
+            const idToken = await auth.currentUser.getIdToken();
+            // text/plain vermeidet CORS-Preflight bei Apps Script
+            const res = await fetch(DRIVE_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ ...payload, idToken })
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error);
+            return data;
+        }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
+        async function syncDriveAccess(coll, id, visibility, emails) {
+            const data = (await getDoc(doc(db, coll, id))).data();
+            if (data?.driveFileId) {
+                await callDrive({
+                    action: 'setAccess',
+                    fileId: data.driveFileId,
+                    visibility,
+                    allowedEmails: emails
+                });
+            }
+        }
+
+        // ---------- Auth & Seite ----------
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
             const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -329,75 +360,125 @@
             const sDoc = await getDoc(doc(db, "subjects", subjectId));
             if (sDoc.exists()) document.getElementById('subject-name').textContent = sDoc.data().name;
 
-            onSnapshot(query(collection(db, "exams"), where("subjectId", "==", subjectId)), (snapshot) => {
+            const examsRef = collection(db, "exams");
+            const email = userEmail.toLowerCase();
+
+            // Admins sehen alles. Studierende bekommen zwei getrennte Abfragen,
+            // damit die Firestore-Regeln jede Abfrage eindeutig prüfen können.
+            const queries = isAdmin
+                ? [query(examsRef, where("subjectId", "==", subjectId))]
+                : [
+                    query(examsRef,
+                        where("subjectId", "==", subjectId),
+                        where("visibility", "==", "alle")),
+                    query(examsRef,
+                        where("subjectId", "==", subjectId),
+                        where("visibility", "==", "benutzerdefiniert"),
+                        where("allowedEmails", "array-contains", email))
+                ];
+
+            const results = queries.map(() => []);
+
+            const render = () => {
                 const list = document.getElementById('exam-list');
+                const exams = new Map();
+                results.forEach(docs => docs.forEach(d => exams.set(d.id, d)));
                 list.innerHTML = "";
-                if (snapshot.empty) {
+
+                if (exams.size === 0) {
                     list.innerHTML = '<p style="text-align:center; opacity:0.5;">Noch keine Klausuren hochgeladen.</p>';
                     return;
                 }
 
-                snapshot.forEach((d) => {
+                exams.forEach((d) => {
                     const exam = d.data();
                     const visibility = exam.visibility || 'alle';
-                    const allowedEmails = exam.allowedEmails || [];
 
-                    if (isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()))) {
-
-                        let statusText = "";
-                        let statusColor = "rgba(255,255,255,0.5)";
-
-                        if (visibility === 'alle') {
-                            statusText = "🔓 Alle";
-                        } else if (visibility === 'niemand') {
-                            statusText = "🔒 Nur Admins";
-                            statusColor = "#e74c3c";
-                        } else if (visibility === 'benutzerdefiniert') {
-                            statusText = `👥 Benutzerdefiniert`;
-                            statusColor = "#3498db";
-                        }
-
-                        // Zahnrad wird NUR für Admins gerendert
-                        let settingsHTML = '';
-                        if (isAdmin) {
-                            settingsHTML = `<span class="settings-icon" title="Einstellungen" onclick="event.stopPropagation(); window.manageVisibility('exams', '${d.id}', '${encodeURIComponent(exam.fileName)}', '${visibility}', '${exam.storagePath || ''}')">⚙️</span>`;
-                        }
-
-                        const item = document.createElement('div');
-                        item.className = 'exam-item';
-                        item.innerHTML = `
-                                <div style="display:flex; flex-direction:column; gap:4px;">
-                                    <span style="font-weight:500;">📄 ${exam.fileName}</span>
-                                    <span style="font-size: 0.75rem; color: ${statusColor}; font-weight: bold;">
-                                        ${statusText}
-                                    </span>
-                                </div>
-                                <div style="display:flex; align-items:center; gap:15px;">
-                                    <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Öffnen</a>
-                                    ${settingsHTML}
-                                </div>`;
-                        list.appendChild(item);
+                    let statusText = "";
+                    let statusColor = "rgba(255,255,255,0.5)";
+                    if (visibility === 'alle') {
+                        statusText = "🔓 Alle";
+                    } else if (visibility === 'niemand') {
+                        statusText = "🔒 Nur Admins";
+                        statusColor = "#e74c3c";
+                    } else if (visibility === 'benutzerdefiniert') {
+                        statusText = "👥 Benutzerdefiniert";
+                        statusColor = "#3498db";
                     }
+
+                    // Zahnrad wird NUR für Admins gerendert
+                    let settingsHTML = '';
+                    if (isAdmin) {
+                        settingsHTML = `<span class="settings-icon" title="Einstellungen" onclick="event.stopPropagation(); window.manageVisibility('exams', '${d.id}', '${encodeURIComponent(exam.fileName)}', '${visibility}')">⚙️</span>`;
+                    }
+
+                    const item = document.createElement('div');
+                    item.className = 'exam-item';
+                    item.innerHTML = `
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <span style="font-weight:500;">📄 ${exam.fileName}</span>
+                                <span style="font-size: 0.75rem; color: ${statusColor}; font-weight: bold;">
+                                    ${statusText}
+                                </span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:15px;">
+                                <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Öffnen</a>
+                                ${settingsHTML}
+                            </div>`;
+                    list.appendChild(item);
+                });
+            };
+
+            queries.forEach((q, i) => {
+                onSnapshot(q, (snapshot) => {
+                    results[i] = snapshot.docs;
+                    render();
+                }, (err) => {
+                    document.getElementById('status').textContent =
+                        "❌ Klausuren konnten nicht geladen werden: " + err.message;
                 });
             });
         }
 
+        // ---------- Upload über Google Drive ----------
         window.handleUpload = async (file) => {
             if (!file || !subjectId) return;
             const status = document.getElementById('status');
+            if (file.size > 20 * 1024 * 1024) {
+                status.textContent = "❌ Datei ist größer als 20 MB.";
+                return;
+            }
             status.textContent = "🚀 Upload läuft...";
             try {
-                const fileName = `${Date.now()}_${file.name}`;
-                const filePath = `${subjectId}/${fileName}`;
-                const { error } = await supabase.storage.from('exams').upload(filePath, file);
-                if (error) throw error;
-                const { data: urlData } = supabase.storage.from('exams').getPublicUrl(filePath);
+                // Fach-Ordner in Drive holen oder anlegen
+                const subjRef = doc(db, "subjects", subjectId);
+                const subjSnap = await getDoc(subjRef);
+                const subjData = subjSnap.data() || {};
+                let folderId = subjData.driveFolderId;
+                if (!folderId) {
+                    const created = await callDrive({
+                        action: 'createFolder',
+                        name: subjData.name || subjectId
+                    });
+                    folderId = created.folderId;
+                    await updateDoc(subjRef, { driveFolderId: folderId });
+                }
+
+                const { fileId, previewUrl } = await callDrive({
+                    action: 'upload',
+                    folderId,
+                    fileName: file.name,
+                    mimeType: file.type || 'application/octet-stream',
+                    base64: await toBase64(file),
+                    visibility: 'alle',
+                    allowedEmails: []
+                });
 
                 await addDoc(collection(db, "exams"), {
                     subjectId,
                     fileName: file.name,
-                    url: urlData.publicUrl,
-                    storagePath: filePath,
+                    url: previewUrl,
+                    driveFileId: fileId,
                     visibility: 'alle',
                     allowedEmails: [],
                     uploadedBy: auth.currentUser.uid,
@@ -411,7 +492,8 @@
             }
         };
 
-        window.manageVisibility = async (coll, id, encodedName, currentVis, storagePath) => {
+        // ---------- Verwaltung (nur Admins) ----------
+        window.manageVisibility = async (coll, id, encodedName, currentVis) => {
             const name = decodeURIComponent(encodedName);
 
             // Aktuelle Daten frisch aus Firestore holen
@@ -431,8 +513,9 @@
 
             if (mode === "4") {
                 if (confirm(`Möchtest du "${name}" wirklich unwiderruflich löschen?`)) {
-                    if (storagePath) {
-                        await supabase.storage.from('exams').remove([storagePath]);
+                    // Datei in Drive in den Papierkorb verschieben
+                    if (currentData.driveFileId) {
+                        await callDrive({ action: 'delete', fileId: currentData.driveFileId });
                     }
                     await deleteDoc(doc(db, coll, id));
                 }
@@ -440,10 +523,9 @@
             }
 
             if (mode === "1" || mode === "2") {
-                await updateDoc(doc(db, coll, id), {
-                    visibility: mode === "1" ? 'alle' : 'niemand',
-                    allowedEmails: []
-                });
+                const vis = mode === "1" ? 'alle' : 'niemand';
+                await updateDoc(doc(db, coll, id), { visibility: vis, allowedEmails: [] });
+                await syncDriveAccess(coll, id, vis, []);
                 return;
             }
 
@@ -477,6 +559,7 @@
                         visibility: 'benutzerdefiniert',
                         allowedEmails: selected
                     });
+                    await syncDriveAccess(coll, id, 'benutzerdefiniert', selected);
                     window.closeModal();
                 };
             }
