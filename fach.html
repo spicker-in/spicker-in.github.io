@@ -6,7 +6,6 @@
     <style>
         :root {
             --primary-blue: #1b4f72;
-            --navbar-bg: rgba(255, 255, 255, 0.1);
             --hover-grey: #e9ecef;
             --text-dark: #333;
         }
@@ -176,7 +175,7 @@
                 transform: scale(1.2);
             }
 
-        /* --- MODAL STYLES --- */
+        /* --- MODAL --- */
         .modal {
             display: none;
             position: fixed;
@@ -185,7 +184,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
         }
 
         .modal-content {
@@ -198,19 +197,19 @@
             color: white;
             max-height: 80vh;
             overflow-y: auto;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .user-item {
             display: flex;
             align-items: center;
             padding: 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             cursor: pointer;
         }
 
             .user-item:hover {
-                background: rgba(255,255,255,0.1);
+                background: rgba(255, 255, 255, 0.1);
             }
 
             .user-item input {
@@ -235,10 +234,10 @@
         <div class="nav-links" id="nav-links-container">
             <a href="start.html">Start</a>
             <a href="chat.html">Chat 💬</a>
-            <a href="profil.html" id="user-link-wrapper" class="user-link">
+            <a href="profil.html" id="user-link-wrapper">
                 <span id="user-display" class="user-display">Lade...</span>
             </a>
-            <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
+            <a href="#" id="logout-link" class="logout-btn">Abmelden</a>
         </div>
     </nav>
 
@@ -251,10 +250,10 @@
             <div class="upload-box">
                 <h3>Altklausur oder Foto hochladen</h3>
                 <div class="upload-controls">
-                    <input type="file" id="upload-file" hidden onchange="window.handleUpload(this.files[0])">
-                    <input type="file" id="camera-file" hidden accept="image/*" capture="environment" onchange="window.handleUpload(this.files[0])">
-                    <button class="btn-upload" onclick="document.getElementById('upload-file').click()">📎 Datei wählen</button>
-                    <span class="camera-icon" onclick="document.getElementById('camera-file').click()" title="Foto aufnehmen">📷</span>
+                    <input type="file" id="upload-file" hidden>
+                    <input type="file" id="camera-file" hidden accept="image/*" capture="environment">
+                    <button class="btn-upload" id="btn-pick-file">📎 Datei wählen</button>
+                    <span class="camera-icon" id="btn-pick-camera" title="Foto aufnehmen">📷</span>
                 </div>
                 <p id="status" style="margin-top:15px; font-size:14px; color: #f1c40f;"></p>
             </div>
@@ -267,7 +266,7 @@
             <h2 id="modal-title">Zugriff verwalten</h2>
             <div id="user-list-container"></div>
             <div style="margin-top: 25px; text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn-modal" style="background:#7f8c8d; color:white;" onclick="window.closeModal()">Abbrechen</button>
+                <button class="btn-modal" id="btn-modal-cancel" style="background:#7f8c8d; color:white;">Abbrechen</button>
                 <button id="save-access-btn" class="btn-modal" style="background:#27ae60; color:white;">Speichern</button>
             </div>
         </div>
@@ -279,7 +278,7 @@
         import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // Google Apps Script Web-App (Drive-Backend)
-        const DRIVE_API_URL = 'https://script.google.com/macros/s/AKfycbw_clm-Ei6erUblk_rHP2fj1Q3x62BpZXBhYwLMGNUgwdjMABr3Jv953EWvWwchfKm2/exec';
+        const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbw_clm-Ei6erUblk_rHP2fj1Q3x62BpZXBhYwLMGNUgwdjMABr3Jv953EWvWwchfKm2/exec";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -290,238 +289,331 @@
             appId: "1:515794720428:web:f509322fe888fb3c8a3109"
         };
 
+        const MAX_FILE_BYTES = 20 * 1024 * 1024;
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const urlParams = new URLSearchParams(window.location.search);
-        const subjectId = urlParams.get('id');
+        const subjectId = new URLSearchParams(window.location.search).get("id");
+
+        let examUnsubscribers = [];
+
+        const statusEl = document.getElementById("status");
+        const examList = document.getElementById("exam-list");
+
+        // ---------- Hilfsfunktionen ----------
+        const HTML_ESCAPE = {
+            "&": "&", "<": "<", ">": ">", "\"": """, "'": "'" };
+
+            function escapeHtml(value) {
+                    return String(value || "").replace(/[&<>"']/g, function (c) {
+                        return HTML_ESCAPE[c];
+                    });
+                }
+
+            function toBase64(file) {
+                return new Promise(function (resolve, reject) {
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        resolve(String(reader.result).split(",")[1]);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
 
         // ---------- Drive-Hilfsfunktionen ----------
         async function callDrive(payload) {
             const idToken = await auth.currentUser.getIdToken();
             const res = await fetch(DRIVE_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ ...payload, idToken })
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(Object.assign({}, payload, { idToken: idToken }))
             });
             const text = await res.text();
             let data;
             try {
                 data = JSON.parse(text);
-            } catch {
-                // Apps Script hat keine JSON-Antwort geliefert (z. B. Anmeldeseite oder Fehlerseite)
-                throw new Error(`Keine JSON-Antwort (HTTP ${res.status}): ${text.slice(0, 200)}`);
+            } catch (parseError) {
+                throw new Error("Keine JSON-Antwort (HTTP " + res.status + "): " + text.slice(0, 200));
             }
-            if (!data.ok) throw new Error(`Apps Script: ${data.error}`);
+            if (!data.ok) {
+                throw new Error("Apps Script: " + data.error);
+            }
             return data;
         }
 
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result.split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-
         async function syncDriveAccess(coll, id, visibility, emails) {
-            const data = (await getDoc(doc(db, coll, id))).data();
-            if (data?.driveFileId) {
+            const snap = await getDoc(doc(db, coll, id));
+            const data = snap.data() || {};
+            if (data.driveFileId) {
                 await callDrive({
-                    action: 'setAccess',
+                    action: "setAccess",
                     fileId: data.driveFileId,
-                    visibility,
+                    visibility: visibility,
                     allowedEmails: emails
                 });
             }
         }
 
+        // ---------- Navigation ----------
+        function addNavLink(href, label) {
+            const a = document.createElement("a");
+            a.href = href;
+            a.textContent = label;
+            document.getElementById("nav-links-container")
+                .insertBefore(a, document.getElementById("user-link-wrapper"));
+        }
+
+        document.getElementById("logout-link").addEventListener("click", function (e) {
+            e.preventDefault();
+            signOut(auth).then(function () {
+                window.location.href = "login.html";
+            });
+        });
+
         // ---------- Auth & Seite ----------
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.href = 'login.html'; return; }
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            const userData = userDoc.data();
-            if (!userData) return;
-
-            document.getElementById('user-display').textContent = userData.name;
-
-            const navContainer = document.getElementById('nav-links-container');
-            const userLinkWrapper = document.getElementById('user-link-wrapper');
-
-            if (userData.isAdmin) {
-                const adminA = document.createElement('a'); adminA.href = 'admin.html'; adminA.textContent = 'Admin';
-                navContainer.insertBefore(adminA, userLinkWrapper);
-            } else {
-                const helpA = document.createElement('a'); helpA.href = 'help.html'; helpA.textContent = 'Hilfe ❓';
-                navContainer.insertBefore(helpA, userLinkWrapper);
+        onAuthStateChanged(auth, async function (user) {
+            if (!user) {
+                window.location.href = "login.html";
+                return;
             }
 
-            const profA = document.createElement('a'); profA.href = 'prof.html'; profA.textContent = 'Professoren';
-            navContainer.insertBefore(profA, userLinkWrapper);
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.data();
+            if (!userData) {
+                statusEl.textContent = "❌ Kein Nutzerprofil gefunden. Bitte wende dich an einen Admin.";
+                return;
+            }
 
-            loadSubjectDetails(user.email, userData.isAdmin);
+            document.getElementById("user-display").textContent = userData.name || user.email;
+
+            if (userData.isAdmin) {
+                addNavLink("admin.html", "Admin");
+            } else {
+                addNavLink("help.html", "Hilfe ❓");
+            }
+            addNavLink("prof.html", "Professoren");
+
+            loadSubjectDetails(user.email, !!userData.isAdmin);
         });
 
         async function loadSubjectDetails(userEmail, isAdmin) {
-            if (!subjectId) return;
+            if (!subjectId) {
+                document.getElementById("subject-name").textContent = "Kein Fach ausgewählt";
+                return;
+            }
+
             const sDoc = await getDoc(doc(db, "subjects", subjectId));
-            if (sDoc.exists()) document.getElementById('subject-name').textContent = sDoc.data().name;
+            if (sDoc.exists()) {
+                document.getElementById("subject-name").textContent = sDoc.data().name;
+            }
 
             const examsRef = collection(db, "exams");
-            const email = userEmail.toLowerCase();
+            const email = (userEmail || "").toLowerCase();
 
-            // Admins sehen alles. Studierende bekommen zwei getrennte Abfragen,
+            // Alte Listener abmelden, falls die Funktion erneut aufgerufen wird
+            examUnsubscribers.forEach(function (unsub) { unsub(); });
+            examUnsubscribers = [];
+
+            // Admins sehen alles. Studierende bekommen getrennte Abfragen,
             // damit die Firestore-Regeln jede Abfrage eindeutig prüfen können.
-            const queries = isAdmin
-                ? [query(examsRef, where("subjectId", "==", subjectId))]
-                : [
-                    query(examsRef,
-                        where("subjectId", "==", subjectId),
-                        where("visibility", "==", "alle")),
-                    query(examsRef,
+            let queries;
+            if (isAdmin) {
+                queries = [query(examsRef, where("subjectId", "==", subjectId))];
+            } else {
+                queries = [query(examsRef,
+                    where("subjectId", "==", subjectId),
+                    where("visibility", "==", "alle"))];
+                if (email) {
+                    queries.push(query(examsRef,
                         where("subjectId", "==", subjectId),
                         where("visibility", "==", "benutzerdefiniert"),
-                        where("allowedEmails", "array-contains", email))
-                ];
+                        where("allowedEmails", "array-contains", email)));
+                }
+            }
 
-            const results = queries.map(() => []);
+            const results = queries.map(function () { return []; });
 
-            const render = () => {
-                const list = document.getElementById('exam-list');
+            function renderExams() {
                 const exams = new Map();
-                results.forEach(docs => docs.forEach(d => exams.set(d.id, d)));
-                list.innerHTML = "";
+                results.forEach(function (docs) {
+                    docs.forEach(function (d) { exams.set(d.id, d); });
+                });
+                examList.innerHTML = "";
 
                 if (exams.size === 0) {
-                    list.innerHTML = '<p style="text-align:center; opacity:0.5;">Noch keine Klausuren hochgeladen.</p>';
+                    examList.innerHTML = '<p style="text-align:center; opacity:0.5;">Noch keine Klausuren hochgeladen.</p>';
                     return;
                 }
 
-                exams.forEach((d) => {
+                exams.forEach(function (d) {
                     const exam = d.data();
-                    const visibility = exam.visibility || 'alle';
+                    const visibility = exam.visibility || "alle";
 
                     let statusText = "";
                     let statusColor = "rgba(255,255,255,0.5)";
-                    if (visibility === 'alle') {
+                    if (visibility === "alle") {
                         statusText = "🔓 Alle";
-                    } else if (visibility === 'niemand') {
+                    } else if (visibility === "niemand") {
                         statusText = "🔒 Nur Admins";
                         statusColor = "#e74c3c";
-                    } else if (visibility === 'benutzerdefiniert') {
+                    } else if (visibility === "benutzerdefiniert") {
                         statusText = "👥 Benutzerdefiniert";
                         statusColor = "#3498db";
                     }
 
-                    // Zahnrad wird NUR für Admins gerendert
-                    let settingsHTML = '';
+                    const item = document.createElement("div");
+                    item.className = "exam-item";
+                    item.innerHTML =
+                        '<div style="display:flex; flex-direction:column; gap:4px;">' +
+                        '<span style="font-weight:500;">📄 ' + escapeHtml(exam.fileName) + '</span>' +
+                        '<span style="font-size:0.75rem; color:' + statusColor + '; font-weight:bold;">' + statusText + '</span>' +
+                        '</div>' +
+                        '<div class="exam-actions" style="display:flex; align-items:center; gap:15px;">' +
+                        '<a href="' + escapeHtml(exam.url) + '" target="_blank" rel="noopener" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Öffnen</a>' +
+                        '</div>';
+
+                    // Zahnrad nur für Admins. Name und Daten werden über dataset gesetzt,
+                    // dadurch sind keine Anführungszeichen-Probleme möglich.
                     if (isAdmin) {
-                        settingsHTML = `<span class="settings-icon" title="Einstellungen" onclick="event.stopPropagation(); window.manageVisibility('exams', '${d.id}', '${encodeURIComponent(exam.fileName)}', '${visibility}')">⚙️</span>`;
+                        const gear = document.createElement("span");
+                        gear.className = "settings-icon";
+                        gear.title = "Einstellungen";
+                        gear.textContent = "⚙️";
+                        gear.dataset.id = d.id;
+                        gear.dataset.name = exam.fileName || "";
+                        gear.dataset.vis = visibility;
+                        item.querySelector(".exam-actions").appendChild(gear);
                     }
 
-                    const item = document.createElement('div');
-                    item.className = 'exam-item';
-                    item.innerHTML = `
-                            <div style="display:flex; flex-direction:column; gap:4px;">
-                                <span style="font-weight:500;">📄 ${exam.fileName}</span>
-                                <span style="font-size: 0.75rem; color: ${statusColor}; font-weight: bold;">
-                                    ${statusText}
-                                </span>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:15px;">
-                                <a href="${exam.url}" target="_blank" style="color:#2ecc71; font-weight:bold; text-decoration:none;">Öffnen</a>
-                                ${settingsHTML}
-                            </div>`;
-                    list.appendChild(item);
+                    examList.appendChild(item);
                 });
-            };
+            }
 
-            queries.forEach((q, i) => {
-                onSnapshot(q, (snapshot) => {
+            queries.forEach(function (q, i) {
+                const unsub = onSnapshot(q, function (snapshot) {
                     results[i] = snapshot.docs;
-                    render();
-                }, (err) => {
-                    document.getElementById('status').textContent =
-                        "❌ Klausuren konnten nicht geladen werden: " + err.message;
+                    renderExams();
+                }, function (err) {
+                    statusEl.textContent = "❌ Klausuren konnten nicht geladen werden: " + err.message;
                 });
+                examUnsubscribers.push(unsub);
             });
         }
 
+        // Ein Listener für alle Zahnräder (Event-Delegation)
+        examList.addEventListener("click", function (e) {
+            const gear = e.target.closest ? e.target.closest(".settings-icon") : null;
+            if (!gear) return;
+            e.stopPropagation();
+            window.manageVisibility("exams", gear.dataset.id, gear.dataset.name, gear.dataset.vis);
+        });
+
         // ---------- Upload über Google Drive ----------
-        window.handleUpload = async (file) => {
+        async function handleUpload(file) {
             if (!file || !subjectId) return;
-            const status = document.getElementById('status');
-            if (file.size > 20 * 1024 * 1024) {
-                status.textContent = "❌ Datei ist größer als 20 MB.";
+            if (file.size > MAX_FILE_BYTES) {
+                statusEl.textContent = "❌ Datei ist größer als 20 MB.";
                 return;
             }
-            status.textContent = "🚀 Upload läuft...";
+            statusEl.textContent = "🚀 Upload läuft...";
             try {
-                // Fach-Ordner in Drive holen oder anlegen
+                // Fach laden und Drive-Ordner holen oder anlegen
                 const subjRef = doc(db, "subjects", subjectId);
                 const subjSnap = await getDoc(subjRef);
-                const subjData = subjSnap.data() || {};
+                if (!subjSnap.exists()) {
+                    throw new Error("Fach nicht gefunden.");
+                }
+                const subjData = subjSnap.data();
+
                 let folderId = subjData.driveFolderId;
                 if (!folderId) {
                     const created = await callDrive({
-                        action: 'createFolder',
+                        action: "createFolder",
                         name: subjData.name || subjectId
                     });
                     folderId = created.folderId;
-                    await updateDoc(subjRef, { driveFolderId: folderId });
+                    try {
+                        await updateDoc(subjRef, { driveFolderId: folderId });
+                    } catch (saveErr) {
+                        throw new Error("Ordner wurde angelegt, aber das Fach konnte nicht gespeichert werden (Firestore-Regel für subjects prüfen): " + saveErr.message);
+                    }
                 }
 
-                const { fileId, previewUrl } = await callDrive({
-                    action: 'upload',
-                    folderId,
+                // Datei in Drive hochladen
+                const base64 = await toBase64(file);
+                const uploaded = await callDrive({
+                    action: "upload",
+                    folderId: folderId,
                     fileName: file.name,
-                    mimeType: file.type || 'application/octet-stream',
-                    base64: await toBase64(file),
-                    visibility: 'alle',
+                    mimeType: file.type || "application/octet-stream",
+                    base64: base64,
+                    visibility: "alle",
                     allowedEmails: []
                 });
 
+                // Metadaten in Firestore speichern
                 await addDoc(collection(db, "exams"), {
-                    subjectId,
+                    subjectId: subjectId,
                     fileName: file.name,
-                    url: previewUrl,
-                    driveFileId: fileId,
-                    visibility: 'alle',
+                    url: uploaded.previewUrl,
+                    driveFileId: uploaded.fileId,
+                    visibility: "alle",
                     allowedEmails: [],
                     uploadedBy: auth.currentUser.uid,
                     createdAt: serverTimestamp()
                 });
 
-                status.textContent = "✅ Erfolgreich hochgeladen!";
-                setTimeout(() => status.textContent = "", 3000);
+                statusEl.textContent = "✅ Erfolgreich hochgeladen!";
+                setTimeout(function () { statusEl.textContent = ""; }, 3000);
             } catch (e) {
-                status.textContent = "❌ Fehler: " + e.message;
+                console.error("Upload-Fehler:", e);
+                statusEl.textContent = "❌ Fehler: " + e.message;
             }
-        };
+        }
+
+        const uploadInput = document.getElementById("upload-file");
+        const cameraInput = document.getElementById("camera-file");
+
+        document.getElementById("btn-pick-file").addEventListener("click", function () {
+            uploadInput.click();
+        });
+        document.getElementById("btn-pick-camera").addEventListener("click", function () {
+            cameraInput.click();
+        });
+
+        function onFileChosen(input) {
+            const file = input.files[0];
+            input.value = ""; // dieselbe Datei kann danach erneut gewählt werden
+            handleUpload(file);
+        }
+        uploadInput.addEventListener("change", function () { onFileChosen(uploadInput); });
+        cameraInput.addEventListener("change", function () { onFileChosen(cameraInput); });
 
         // ---------- Verwaltung (nur Admins) ----------
-        window.manageVisibility = async (coll, id, encodedName, currentVis) => {
-            const name = decodeURIComponent(encodedName);
-
+        window.manageVisibility = async function (coll, id, name, currentVis) {
             // Aktuelle Daten frisch aus Firestore holen
             const docSnap = await getDoc(doc(db, coll, id));
             const currentData = docSnap.exists() ? docSnap.data() : {};
             const currentEmails = currentData.allowedEmails || [];
 
+            const defaultMode = currentVis === "alle" ? "1" : (currentVis === "niemand" ? "2" : "3");
             const mode = prompt(
-                `Aktion für "${name}":\n` +
-                `1 = Alle (Jeder kann es sehen)\n` +
-                `2 = Nur Admins (Gesperrt)\n` +
-                `3 = Benutzerdefiniert (Nutzer auswählen)\n` +
-                `4 = LÖSCHEN 🗑️`,
-                currentVis === 'alle' ? "1" : (currentVis === 'niemand' ? "2" : "3")
+                "Aktion für \"" + name + "\":\n" +
+                "1 = Alle (Jeder kann es sehen)\n" +
+                "2 = Nur Admins (Gesperrt)\n" +
+                "3 = Benutzerdefiniert (Nutzer auswählen)\n" +
+                "4 = LÖSCHEN 🗑️",
+                defaultMode
             );
             if (!mode) return;
 
             if (mode === "4") {
-                if (confirm(`Möchtest du "${name}" wirklich unwiderruflich löschen?`)) {
+                if (confirm("Möchtest du \"" + name + "\" wirklich unwiderruflich löschen?")) {
                     // Datei in Drive in den Papierkorb verschieben
                     if (currentData.driveFileId) {
-                        await callDrive({ action: 'delete', fileId: currentData.driveFileId });
+                        await callDrive({ action: "delete", fileId: currentData.driveFileId });
                     }
                     await deleteDoc(doc(db, coll, id));
                 }
@@ -529,50 +621,65 @@
             }
 
             if (mode === "1" || mode === "2") {
-                const vis = mode === "1" ? 'alle' : 'niemand';
+                const vis = mode === "1" ? "alle" : "niemand";
                 await updateDoc(doc(db, coll, id), { visibility: vis, allowedEmails: [] });
                 await syncDriveAccess(coll, id, vis, []);
                 return;
             }
 
             if (mode === "3") {
-                const modal = document.getElementById('userModal');
-                const container = document.getElementById('user-list-container');
-                document.getElementById('modal-title').textContent = `Zugriff für "${name}"`;
-                modal.style.display = 'block';
-                container.innerHTML = '<p>Lade Nutzerliste...</p>';
+                const modal = document.getElementById("userModal");
+                const container = document.getElementById("user-list-container");
+                document.getElementById("modal-title").textContent = "Zugriff für \"" + name + "\"";
+                modal.style.display = "block";
+                container.innerHTML = "<p>Lade Nutzerliste...</p>";
 
                 const usersSnap = await getDocs(collection(db, "users"));
-                container.innerHTML = '';
-                usersSnap.forEach(uDoc => {
+                container.innerHTML = "";
+                usersSnap.forEach(function (uDoc) {
                     const u = uDoc.data();
-                    const email = u.email.toLowerCase();
-                    const div = document.createElement('div');
-                    div.className = 'user-item';
-                    div.innerHTML = `<input type="checkbox" value="${email}" ${currentEmails.includes(email) ? 'checked' : ''}> <span>${u.name} (${email})</span>`;
-                    div.onclick = (e) => {
-                        if (e.target.tagName !== 'INPUT') {
-                            const cb = div.querySelector('input');
-                            cb.checked = !cb.checked;
+                    const email = (u.email || "").toLowerCase();
+                    if (!email) return; // Nutzer ohne E-Mail können nicht freigegeben werden
+
+                    const row = document.createElement("div");
+                    row.className = "user-item";
+
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.value = email;
+                    checkbox.checked = currentEmails.indexOf(email) !== -1;
+
+                    const label = document.createElement("span");
+                    label.textContent = (u.name || email) + " (" + email + ")";
+
+                    row.appendChild(checkbox);
+                    row.appendChild(label);
+                    row.addEventListener("click", function (e) {
+                        if (e.target !== checkbox) {
+                            checkbox.checked = !checkbox.checked;
                         }
-                    };
-                    container.appendChild(div);
+                    });
+                    container.appendChild(row);
                 });
 
-                document.getElementById('save-access-btn').onclick = async () => {
-                    const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
+                document.getElementById("save-access-btn").onclick = async function () {
+                    const selected = Array.from(container.querySelectorAll("input:checked")).map(function (cb) {
+                        return cb.value;
+                    });
                     await updateDoc(doc(db, coll, id), {
-                        visibility: 'benutzerdefiniert',
+                        visibility: "benutzerdefiniert",
                         allowedEmails: selected
                     });
-                    await syncDriveAccess(coll, id, 'benutzerdefiniert', selected);
-                    window.closeModal();
+                    await syncDriveAccess(coll, id, "benutzerdefiniert", selected);
+                    closeModal();
                 };
             }
         };
 
-        window.closeModal = () => document.getElementById('userModal').style.display = 'none';
-        window.logout = () => signOut(auth).then(() => location.href = 'login.html');
+        function closeModal() {
+            document.getElementById("userModal").style.display = "none";
+        }
+        document.getElementById("btn-modal-cancel").addEventListener("click", closeModal);
     </script>
 </body>
 </html>
