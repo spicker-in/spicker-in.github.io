@@ -463,7 +463,7 @@
                 const folderId = folderRes.folderId;
                 showStatus("💾 Speichere in Firestore...");
 
-                // 2. In Firestore speichern (inklusive driveFolderId & createdAt)
+                // 2. In Firestore speichern (jetzt INKLUSIVE driveFolderId)
                 await addDoc(collection(db, "subjects"), {
                     name: name,
                     driveFolderId: folderId,
