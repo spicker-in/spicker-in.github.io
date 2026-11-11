@@ -199,6 +199,7 @@
             color: #f1c40f;
             min-height: 1.2em;
             word-break: break-word;
+            white-space: pre-wrap;
         }
 
         .btn {
@@ -320,26 +321,42 @@
         let currentUserData = null;
         const statusEl = document.getElementById("status");
         function showStatus(text) {
+            console.log("[Status]", text);
             if (statusEl) statusEl.textContent = text;
         }
         async function callDrive(payload) {
-            if (!auth.currentUser) throw new Error("Nicht angemeldet.");
+            if (!auth.currentUser) throw new Error("Benutzer nicht eingeloggt in Firebase Auth.");
+
+            console.log("1. Hole Firebase ID-Token...");
             const idToken = await auth.currentUser.getIdToken();
-            const res = await fetch(DRIVE_API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(Object.assign({}, payload, { idToken: idToken }))
-            });
+
+            console.log("2. Sende Fetch-Request an Apps Script:", DRIVE_API_URL);
+            let res;
+            try {
+                res = await fetch(DRIVE_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(Object.assign({}, payload, { idToken: idToken }))
+                });
+            } catch (networkErr) {
+                console.error("Netzwerkfehler beim Fetch:", networkErr);
+                throw new Error("Netzwerkfehler (CORS / Internetverbindung / falsche URL): " + networkErr.message);
+            }
+            console.log("3. HTTP Status erhalten:", res.status);
             const text = await res.text();
+            console.log("4. Raw Antwort von Apps Script:", text);
             let data;
             try {
                 data = JSON.parse(text);
             } catch (parseError) {
-                throw new Error("Keine JSON-Antwort: " + text.slice(0, 200));
+                console.error("Antwort ist kein JSON:", text);
+                throw new Error("Apps Script lieferte kein JSON (HTTP " + res.status + "): " + text.slice(0, 150));
             }
             if (!data.ok) {
-                throw new Error("Apps Script: " + data.error);
+                console.error("Apps Script meldete Fehler:", data.error);
+                throw new Error("Apps Script Fehler: " + data.error);
             }
+            console.log("5. Drive Aufruf erfolgreich:", data);
             return data;
         }
         onAuthStateChanged(auth, async (user) => {
@@ -453,7 +470,7 @@
             const name = nameInput.value.trim();
             if (!name) return;
             try {
-                showStatus("📁 Erstelle Google Drive Ordner...");
+                showStatus("📁 Starte Erstellung für '" + name + "'...");
 
                 // 1. Google Drive Ordner über Apps Script anlegen
                 const folderRes = await callDrive({
@@ -461,9 +478,9 @@
                     name: name
                 });
                 const folderId = folderRes.folderId;
-                showStatus("💾 Speichere in Firestore...");
+                showStatus("💾 Speichere in Firestore (FolderID: " + folderId + ")...");
 
-                // 2. In Firestore speichern (jetzt INKLUSIVE driveFolderId)
+                // 2. In Firestore speichern
                 await addDoc(collection(db, "subjects"), {
                     name: name,
                     driveFolderId: folderId,
@@ -472,11 +489,11 @@
                     createdAt: serverTimestamp()
                 });
                 nameInput.value = '';
-                showStatus("✅ Fach erfolgreich angelegt!");
-                setTimeout(() => showStatus(""), 3000);
+                showStatus("✅ Fach erfolgreich angelegt & Ordner erstellt!");
+                setTimeout(() => showStatus(""), 4000);
             } catch (e) {
-                console.error(e);
-                showStatus("❌ Fehler: " + e.message);
+                console.error("FEHLER AUFGETRETEN:", e);
+                showStatus("❌ " + e.message);
             }
         };
         window.closeModal = () => document.getElementById('userModal').style.display = 'none';
