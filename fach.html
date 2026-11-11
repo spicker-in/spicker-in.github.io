@@ -518,7 +518,7 @@
                 examUnsubscribers.push(unsub);
             });
         }
-        // ---------- AUTOMATISCHER UPLOAD & ROBUSTE SELBSTHEILUNG ----------
+        // ---------- UPLOAD OHNE AUTOMATISCHES ORDNER-ERSTELLEN ----------
         async function handleUpload(file) {
             if (!file) return;
             if (!subjectId) {
@@ -542,54 +542,20 @@
                 }
                 let subjData = subjSnap.data();
                 let folderId = subjData.driveFolderId;
-                async function tryUploadToDrive(fId) {
-                    const base64 = await readAsBase64(file);
-                    return await callDrive({
-                        action: "upload",
-                        folderId: fId,
-                        fileName: file.name,
-                        mimeType: file.type || "application/octet-stream",
-                        base64: base64,
-                        visibility: "alle",
-                        allowedEmails: [],
-                        folderName: subjData.name || subjectId
-                    });
-                }
-                let uploaded;
+                // KEIN automatisches Anlegen mehr: Wenn ID fehlt, direkt Fehler werfen!
                 if (!folderId) {
-                    showStatus("🚀 Fach-Ordner wird in Drive angelegt...");
-                    const created = await callDrive({
-                        action: "createFolder",
-                        name: subjData.name || subjectId
-                    });
-                    folderId = created.folderId;
-                    await updateDoc(subjRef, { driveFolderId: folderId });
+                    throw new Error("Kein Google Drive Ordner für dieses Fach hinterlegt.");
                 }
-                showStatus("🚀 Datei wird nach Drive hochgeladen...");
-                try {
-                    uploaded = await tryUploadToDrive(folderId);
-                } catch (firstError) {
-                    const errStr = String(firstError.message || "").toLowerCase();
-                    if (errStr.includes("element") || errStr.includes("id") || errStr.includes("gefunden")) {
-                        showStatus("🔄 Ordner wurde in Drive vermisst – wird automatisch neu erstellt...");
-
-                        await updateDoc(subjRef, { driveFolderId: null });
-                        const created = await callDrive({
-                            action: "createFolder",
-                            name: subjData.name || subjectId
-                        });
-                        folderId = created.folderId;
-                        await updateDoc(subjRef, { driveFolderId: folderId });
-                        showStatus("🚀 Zweiter Upload-Versuch...");
-                        uploaded = await tryUploadToDrive(folderId);
-                    } else {
-                        throw firstError;
-                    }
-                }
-                // Falls das Apps Script den Ordner frisch erstellt hat, ID in Firestore speichern
-                if (uploaded && uploaded.folderId) {
-                    await updateDoc(subjRef, { driveFolderId: uploaded.folderId });
-                }
+                const base64 = await readAsBase64(file);
+                const uploaded = await callDrive({
+                    action: "upload",
+                    folderId: folderId,
+                    fileName: file.name,
+                    mimeType: file.type || "application/octet-stream",
+                    base64: base64,
+                    visibility: "alle",
+                    allowedEmails: []
+                });
                 // Metadaten in Firestore speichern
                 await addDoc(collection(db, "exams"), {
                     subjectId: subjectId,
