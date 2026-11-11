@@ -315,8 +315,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, query, where, onSnapshot, addDoc, updateDoc, getDocs, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        // ---------- Konfiguration ----------
+
         const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbw_clm-Ei6erUblk_rHP2fj1Q3x62BpZXBhYwLMGNUgwdjMABr3Jv953EWvWwchfKm2/exec";
+
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
             authDomain: "spickersite.firebaseapp.com",
@@ -326,7 +327,6 @@
             appId: "1:515794720428:web:f509322fe888fb3c8a3109"
         };
         const MAX_FILE_BYTES = 20 * 1024 * 1024;
-        // ---------- Initialisierung ----------
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -363,9 +363,7 @@
             });
         }
         async function callDrive(payload) {
-            if (!auth.currentUser) {
-                throw new Error("Nicht angemeldet.");
-            }
+            if (!auth.currentUser) throw new Error("Nicht angemeldet.");
             const idToken = await auth.currentUser.getIdToken();
             const res = await fetch(DRIVE_API_URL, {
                 method: "POST",
@@ -416,7 +414,7 @@
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
             if (!userData) {
-                showStatus("❌ Kein Nutzerprofil gefunden. Bitte wende dich an einen Admin.");
+                showStatus("❌ Kein Nutzerprofil gefunden.");
                 return;
             }
             isAdminUser = !!userData.isAdmin;
@@ -444,6 +442,7 @@
             const email = (userEmail || "").toLowerCase();
             examUnsubscribers.forEach(function (unsub) { unsub(); });
             examUnsubscribers = [];
+
             let queries;
             if (isAdminUser) {
                 queries = [query(examsRef, where("subjectId", "==", subjectId))];
@@ -458,6 +457,7 @@
                         where("allowedEmails", "array-contains", email)));
                 }
             }
+
             const results = queries.map(function () { return []; });
             function renderExams() {
                 const exams = new Map();
@@ -518,7 +518,6 @@
                 examUnsubscribers.push(unsub);
             });
         }
-        // ---------- UPLOAD MIT AUTOMATISCHEM ORDNER-ERSTELLEN (WEG 1) ----------
         async function handleUpload(file) {
             if (!file) return;
             if (!subjectId) {
@@ -542,18 +541,18 @@
                 }
                 let subjData = subjSnap.data();
                 let folderId = subjData.driveFolderId;
-                // AUTOMATISCHES ERSTELLEN, WENN DIE ID FEHLT:
+
                 if (!folderId) {
-                    showStatus("📁 Erstelle Google Drive Ordner...");
+                    showStatus("📁 Erstelle Google Drive Ordner nachträglich...");
                     const folderRes = await callDrive({
                         action: "createFolder",
                         name: subjData.name || "Fach"
                     });
                     folderId = folderRes.folderId;
-                    // ID direkt in Firestore für dieses Fach abspeichern
                     await updateDoc(subjRef, { driveFolderId: folderId });
                     showStatus("🚀 Lade Datei hoch...");
                 }
+
                 const base64 = await readAsBase64(file);
                 const uploaded = await callDrive({
                     action: "upload",
@@ -564,7 +563,7 @@
                     visibility: "alle",
                     allowedEmails: []
                 });
-                // Metadaten in Firestore speichern
+
                 await addDoc(collection(db, "exams"), {
                     subjectId: subjectId,
                     fileName: file.name,
@@ -575,6 +574,7 @@
                     uploadedBy: auth.currentUser.uid,
                     createdAt: serverTimestamp()
                 });
+
                 showStatus("✅ Erfolgreich hochgeladen!");
                 setTimeout(function () { showStatus(""); }, 3000);
             } catch (e) {
@@ -587,9 +587,9 @@
             input.value = "";
             handleUpload(file);
         }
+
         uploadInput.addEventListener("change", function () { onFileChosen(uploadInput); });
         cameraInput.addEventListener("change", function () { onFileChosen(cameraInput); });
-        // ---------- Verwaltung (nur Admins) ----------
         async function manageExam(id, name, currentVis) {
             const docSnap = await getDoc(doc(db, "exams", id));
             const currentData = docSnap.exists() ? docSnap.data() : {};

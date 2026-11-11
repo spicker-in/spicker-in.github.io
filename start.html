@@ -22,7 +22,6 @@
             flex-direction: column;
             overflow: hidden;
         }
-
         /* --- NAVBAR --- */
         .navbar {
             background: rgba(255, 255, 255, 0.1);
@@ -90,14 +89,12 @@
             color: white;
             text-decoration: none;
         }
-
         /* --- LAYOUT --- */
         .main-layout {
             display: flex;
             flex: 1;
             overflow: hidden;
         }
-
         /* Sidebar */
         .sidebar {
             width: 320px;
@@ -169,7 +166,6 @@
                 color: #d35400;
                 transform: rotate(45deg);
             }
-
         /* Content Area */
         .content-area {
             flex: 1;
@@ -197,6 +193,14 @@
                 color: #333;
             }
 
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #f1c40f;
+            min-height: 1.2em;
+            word-break: break-word;
+        }
+
         .btn {
             padding: 10px 20px;
             border-radius: 5px;
@@ -209,7 +213,6 @@
             background: #27ae60;
             color: white;
         }
-
         /* Modal */
         .modal {
             display: none;
@@ -255,20 +258,17 @@
     </style>
 </head>
 <body>
-
     <nav class="navbar">
         <div class="nav-brand">🎓 Spicker Informatik</div>
         <div class="nav-links" id="nav-links-container">
             <a href="start.html" style="border-bottom: 2px solid white;">Start</a>
             <a href="chat.html">Chat 💬</a>
-
             <a href="profil.html" id="user-link-wrapper" class="user-link">
                 <span id="user-display" class="user-display">Lade...</span>
             </a>
             <a href="#" onclick="logout()" class="logout-btn">Abmelden</a>
         </div>
     </nav>
-
     <div class="main-layout">
         <aside class="sidebar">
             <div class="sidebar-header">Fächerübersicht</div>
@@ -276,21 +276,19 @@
                 <!-- Fächer werden hier geladen -->
             </div>
         </aside>
-
         <main class="content-area">
             <div id="admin-area" class="admin-panel">
                 <h3 style="margin-top:0">Neues Fach anlegen</h3>
                 <input type="text" id="new-subject-name" placeholder="Name des Fachs...">
                 <button class="btn btn-add" onclick="createNewSubject()">Hinzufügen</button>
+                <p id="status" class="status"></p>
             </div>
-
             <div id="welcome-message">
                 <h1>Willkommen!</h1>
                 <p>Wähle links ein Fach aus, um die Inhalte zu sehen.</p>
             </div>
         </main>
     </div>
-
     <!-- MODAL FÜR ZUGRIFFSSTEUERUNG -->
     <div id="userModal" class="modal">
         <div class="modal-content">
@@ -302,11 +300,11 @@
             </div>
         </div>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, onSnapshot, addDoc, updateDoc, getDocs, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        const DRIVE_API_URL = "https://script.google.com/macros/s/AKfycbw_clm-Ei6erUblk_rHP2fj1Q3x62BpZXBhYwLMGNUgwdjMABr3Jv953EWvWwchfKm2/exec";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCFFoB1iSsfFyhDDPlsyNrTPf_mnpogVOc",
@@ -316,26 +314,42 @@
             messagingSenderId: "515794720428",
             appId: "1:515794720428:web:f509322fe888fb3c8a3109"
         };
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
         let currentUserData = null;
-
+        const statusEl = document.getElementById("status");
+        function showStatus(text) {
+            if (statusEl) statusEl.textContent = text;
+        }
+        async function callDrive(payload) {
+            if (!auth.currentUser) throw new Error("Nicht angemeldet.");
+            const idToken = await auth.currentUser.getIdToken();
+            const res = await fetch(DRIVE_API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(Object.assign({}, payload, { idToken: idToken }))
+            });
+            const text = await res.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseError) {
+                throw new Error("Keine JSON-Antwort: " + text.slice(0, 200));
+            }
+            if (!data.ok) {
+                throw new Error("Apps Script: " + data.error);
+            }
+            return data;
+        }
         onAuthStateChanged(auth, async (user) => {
             if (!user) { window.location.href = 'login.html'; return; }
-
             const snap = await getDoc(doc(db, "users", user.uid));
             currentUserData = snap.data();
-
             if (!currentUserData) return;
-
             document.getElementById('user-display').textContent = currentUserData.name;
-
             const navContainer = document.getElementById('nav-links-container');
             const userLinkWrapper = document.getElementById('user-link-wrapper');
-
             if (currentUserData.isAdmin) {
                 const adminA = document.createElement('a');
                 adminA.href = 'admin.html';
@@ -348,15 +362,12 @@
                 helpA.textContent = 'Hilfe ❓';
                 navContainer.insertBefore(helpA, userLinkWrapper);
             }
-
             const profA = document.createElement('a');
             profA.href = 'prof.html';
             profA.textContent = 'Professoren';
             navContainer.insertBefore(profA, userLinkWrapper);
-
             loadSubjects(user.email, currentUserData.isAdmin);
         });
-
         function loadSubjects(userEmail, isAdmin) {
             onSnapshot(collection(db, "subjects"), (snapshot) => {
                 const list = document.getElementById('subjects-list');
@@ -365,19 +376,14 @@
                     const sub = d.data();
                     const visibility = sub.visibility || 'alle';
                     const allowedEmails = sub.allowedEmails || [];
-
                     let hasAccess = isAdmin || visibility === 'alle' || (visibility === 'benutzerdefiniert' && allowedEmails.includes(userEmail.toLowerCase()));
-
                     if (hasAccess) {
                         const item = document.createElement('div');
                         item.className = 'subject-item';
-
-                        // Zahnrad wird NUR im HTML gerendert, wenn der User Admin ist!
                         let settingsHTML = '';
                         if (isAdmin) {
                             settingsHTML = `<span class="settings-icon" title="Einstellungen" onclick="event.stopPropagation(); window.manageVisibility('subjects', '${d.id}', '${encodeURIComponent(sub.name)}', '${visibility}')">⚙️</span>`;
                         }
-
                         item.innerHTML = `
                                 <span class="subject-name">${sub.name}</span>
                                 <div class="subject-actions">
@@ -391,26 +397,19 @@
                 });
             });
         }
-
-        // Global zugänglich machen für den onclick-Handler im HTML
         window.manageVisibility = async (coll, id, encodedName, currentVis) => {
             const name = decodeURIComponent(encodedName);
-
-            // Aktuelle Daten frisch holen, um aktuelle AllowedEmails zu haben
             const docSnap = await getDoc(doc(db, coll, id));
             const currentData = docSnap.exists() ? docSnap.data() : {};
             const currentEmails = currentData.allowedEmails || [];
-
             const mode = prompt(`Sichtbarkeit für "${name}" ändern:\n1 = Alle\n2 = Nur Admins\n3 = Benutzerdefiniert\n4 = Fach LÖSCHEN 🗑️`, "1");
             if (!mode) return;
-
             if (mode === "4") {
                 if (confirm(`Möchtest du das Fach "${name}" wirklich unwiderruflich löschen?`)) {
                     await deleteDoc(doc(db, coll, id));
                 }
                 return;
             }
-
             if (mode === "1" || mode === "2") {
                 await updateDoc(doc(db, coll, id), {
                     visibility: mode === "1" ? 'alle' : 'niemand',
@@ -418,13 +417,11 @@
                 });
                 return;
             }
-
             if (mode === "3") {
                 const modal = document.getElementById('userModal');
                 const container = document.getElementById('user-list-container');
                 modal.style.display = 'block';
                 container.innerHTML = '<p>Lade Nutzerliste...</p>';
-
                 const usersSnap = await getDocs(collection(db, "users"));
                 container.innerHTML = '';
                 usersSnap.forEach(uDoc => {
@@ -441,7 +438,6 @@
                     };
                     container.appendChild(div);
                 });
-
                 document.getElementById('save-access-btn').onclick = async () => {
                     const selected = Array.from(container.querySelectorAll('input:checked')).map(cb => cb.value);
                     await updateDoc(doc(db, coll, id), {
@@ -452,19 +448,37 @@
                 };
             }
         };
-
         window.createNewSubject = async () => {
             const nameInput = document.getElementById('new-subject-name');
             const name = nameInput.value.trim();
             if (!name) return;
             try {
+                showStatus("📁 Erstelle Google Drive Ordner...");
+
+                // 1. Google Drive Ordner über Apps Script anlegen
+                const folderRes = await callDrive({
+                    action: "createFolder",
+                    name: name
+                });
+                const folderId = folderRes.folderId;
+                showStatus("💾 Speichere in Firestore...");
+
+                // 2. In Firestore speichern (inklusive driveFolderId & createdAt)
                 await addDoc(collection(db, "subjects"), {
-                    name, visibility: 'alle', allowedEmails: [], createdAt: new Date()
+                    name: name,
+                    driveFolderId: folderId,
+                    visibility: 'alle',
+                    allowedEmails: [],
+                    createdAt: serverTimestamp()
                 });
                 nameInput.value = '';
-            } catch (e) { alert(e.message); }
+                showStatus("✅ Fach erfolgreich angelegt!");
+                setTimeout(() => showStatus(""), 3000);
+            } catch (e) {
+                console.error(e);
+                showStatus("❌ Fehler: " + e.message);
+            }
         };
-
         window.closeModal = () => document.getElementById('userModal').style.display = 'none';
         window.logout = () => signOut(auth).then(() => window.location.href = 'login.html');
     </script>
