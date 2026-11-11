@@ -574,7 +574,6 @@
                     // Falls der Ordner in Google Drive gelöscht wurde, fange den Fehler ab und heile es automatisch!
                     if (String(firstError.message).includes("Element mit der angegebenen ID gefunden")) {
                         showStatus("🔄 Ordner wurde in Drive vermisst – wird automatisch neu erstellt...");
-
                         // Alten kaputten Verweis in Firestore löschen
                         await updateDoc(subjRef, { driveFolderId: null });
                         // Neuen Ordner anlegen
@@ -583,7 +582,6 @@
                             name: subjData.name || subjectId
                         });
                         folderId = created.folderId;
-
                         // Neue ID speichern
                         await updateDoc(subjRef, { driveFolderId: folderId });
                         // Zweiter Versuch mit neuem Ordner
