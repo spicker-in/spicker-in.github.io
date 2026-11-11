@@ -1,0 +1,20 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload-Test</title>
+</head>
+<body style="font-family: sans-serif; padding: 40px;">
+    <input type="file" id="f1" hidden>
+    <label for="f1" style="display:inline-block; background:#2ecc71; color:white; padding:12px 30px; border-radius:50px; cursor:pointer;">
+        📎 Datei wählen (Test)
+    </label>
+    <p id="out"></p>
+    <script>
+        document.getElementById("f1").addEventListener("change", function (e) {
+            const f = e.target.files[0];
+            document.getElementById("out").textContent = f ? "Gewählt: " + f.name : "Keine Datei";
+        });
+    </script>
+</body>
+</html>
