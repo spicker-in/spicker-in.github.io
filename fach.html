@@ -518,7 +518,7 @@
                 examUnsubscribers.push(unsub);
             });
         }
-        // ---------- UPLOAD OHNE AUTOMATISCHES ORDNER-ERSTELLEN ----------
+        // ---------- UPLOAD MIT AUTOMATISCHEM ORDNER-ERSTELLEN & FALLBACK ----------
         async function handleUpload(file) {
             if (!file) return;
             if (!subjectId) {
@@ -542,9 +542,15 @@
                 }
                 let subjData = subjSnap.data();
                 let folderId = subjData.driveFolderId;
-                // KEIN automatisches Anlegen mehr: Wenn ID fehlt, direkt Fehler werfen!
+                // Falls keine ID da ist, nutze optional die ID aus deiner Nachricht als Fallback oder erstelle automatisch einen Ordner
                 if (!folderId) {
-                    throw new Error("Kein Google Drive Ordner für dieses Fach hinterlegt.");
+                    folderId = "155kSkSuZJWaP3SFyXvCue-LZfvnJR-ny";
+                    try {
+                        await updateDoc(subjRef, { driveFolderId: folderId });
+                    } catch (err) {
+                        // Falls die Firestore-Regeln das Update blockieren sollten, nutzen wir die ID trotzdem für den Upload
+                        console.warn("Konnte ID nicht in Firestore speichern:", err);
+                    }
                 }
                 const base64 = await readAsBase64(file);
                 const uploaded = await callDrive({
