@@ -339,11 +339,9 @@
         const modalContainer = document.getElementById("user-list-container");
         let examUnsubscribers = [];
         let isAdminUser = false;
-        // Sichtbare Fehler statt stiller Ausfälle
         window.addEventListener("error", function (e) {
             statusEl.textContent = "❌ Skriptfehler: " + e.message;
         });
-        // ---------- Hilfsfunktionen ----------
         function showStatus(text) {
             statusEl.textContent = text;
         }
@@ -364,7 +362,6 @@
                 reader.readAsDataURL(file);
             });
         }
-        // Aufruf des Apps-Script-Proxys mit Firebase-ID-Token
         async function callDrive(payload) {
             if (!auth.currentUser) {
                 throw new Error("Nicht angemeldet.");
@@ -405,14 +402,12 @@
             document.getElementById("nav-links-container")
                 .insertBefore(a, document.getElementById("user-link-wrapper"));
         }
-        // ---------- Navigation & Logout ----------
         document.getElementById("logout-link").addEventListener("click", function (e) {
             e.preventDefault();
             signOut(auth).then(function () {
                 window.location.href = "login.html";
             });
         });
-        // ---------- Auth & Seite ----------
         onAuthStateChanged(auth, async function (user) {
             if (!user) {
                 window.location.href = "login.html";
@@ -438,7 +433,6 @@
             }
             loadSubject(user.email);
         });
-        // ---------- Fach und Klausuren laden ----------
         async function loadSubject(userEmail) {
             const sDoc = await getDoc(doc(db, "subjects", subjectId));
             if (sDoc.exists()) {
@@ -448,11 +442,8 @@
             }
             const examsRef = collection(db, "exams");
             const email = (userEmail || "").toLowerCase();
-            // Alte Listener abmelden
             examUnsubscribers.forEach(function (unsub) { unsub(); });
             examUnsubscribers = [];
-            // Admins sehen alles. Studierende bekommen getrennte Abfragen,
-            // damit die Firestore-Regeln jede Abfrage eindeutig prüfen können.
             let queries;
             if (isAdminUser) {
                 queries = [query(examsRef, where("subjectId", "==", subjectId))];
@@ -527,7 +518,7 @@
                 examUnsubscribers.push(unsub);
             });
         }
-        // ---------- Upload über Google Drive ----------
+        // ---------- AUTOMATISCHER UPLOAD & SELBSTHEILUNG BEI GELÖSCHTEM ORDNER ----------
         async function handleUpload(file) {
             if (!file) return;
             if (!subjectId) {
@@ -544,54 +535,75 @@
             }
             showStatus("🚀 Upload läuft...");
             try {
-                // Fach laden und Drive-Ordner holen oder anlegen
                 const subjRef = doc(db, "subjects", subjectId);
-                const subjSnap = await getDoc(subjRef);
+                let subjSnap = await getDoc(subjRef);
                 if (!subjSnap.exists()) {
                     throw new Error("Fach nicht gefunden.");
                 }
-                const subjData = subjSnap.data();
+                let subjData = subjSnap.data();
                 let folderId = subjData.driveFolderId;
+                // Funktion zum Hochladen (mit automatischem Retry, falls der Ordner in Drive gelöscht wurde)
+                async function tryUploadToDrive(fId) {
+                    const base64 = await readAsBase64(file);
+                    return await callDrive({
+                        action: "upload",
+                        folderId: fId,
+                        fileName: file.name,
+                        mimeType: file.type || "application/octet-stream",
+                        base64: base64,
+                        visibility: "alle",
+                        allowedEmails: []
+                    });
+                }
+                let uploaded;
                 if (!folderId) {
+                    // Ordner komplett neu anlegen
                     showStatus("🚀 Fach-Ordner wird in Drive angelegt...");
                     const created = await callDrive({
                         action: "createFolder",
                         name: subjData.name || subjectId
                     });
                     folderId = created.folderId;
-                    try {
+                    await updateDoc(subjRef, { driveFolderId: folderId });
+                }
+                // Versuch 1: Hochladen in den gespeicherten Ordner
+                showStatus("🚀 Datei wird nach Drive hochgeladen...");
+                try {
+                    uploaded = await tryUploadToDrive(folderId);
+                } catch (firstError) {
+                    // Falls der Ordner in Google Drive gelöscht wurde, fange den Fehler ab und heile es automatisch!
+                    if (String(firstError.message).includes("Element mit der angegebenen ID gefunden")) {
+                        showStatus("🔄 Ordner wurde in Drive vermisst – wird automatisch neu erstellt...");
+
+                        // Alten kaputten Verweis in Firestore löschen
+                        await updateDoc(subjRef, { driveFolderId: null });
+                        // Neuen Ordner anlegen
+                        const created = await callDrive({
+                            action: "createFolder",
+                            name: subjData.name || subjectId
+                        });
+                        folderId = created.folderId;
+
+                        // Neue ID speichern
                         await updateDoc(subjRef, { driveFolderId: folderId });
-                    } catch (saveErr) {
-                        throw new Error("Ordner angelegt, aber Fach nicht gespeichert (Firestore-Regel für subjects prüfen): " + saveErr.message);
+                        // Zweiter Versuch mit neuem Ordner
+                        showStatus("🚀 Zweiter Upload-Versuch...");
+                        uploaded = await tryUploadToDrive(folderId);
+                    } else {
+                        throw firstError;
                     }
                 }
-                // Datei in Drive hochladen
-                showStatus("🚀 Datei wird nach Drive hochgeladen...");
-                const base64 = await readAsBase64(file);
-                const uploaded = await callDrive({
-                    action: "upload",
-                    folderId: folderId,
-                    fileName: file.name,
-                    mimeType: file.type || "application/octet-stream",
-                    base64: base64,
-                    visibility: "alle",
-                    allowedEmails: []
-                });
                 // Metadaten in Firestore speichern
-                try {
-                    await addDoc(collection(db, "exams"), {
-                        subjectId: subjectId,
-                        fileName: file.name,
-                        url: uploaded.previewUrl,
-                        driveFileId: uploaded.fileId,
-                        visibility: "alle",
-                        allowedEmails: [],
-                        uploadedBy: auth.currentUser.uid,
-                        createdAt: serverTimestamp()
-                    });
-                } catch (fsErr) {
-                    throw new Error("Datei in Drive, aber Eintrag in Firestore fehlgeschlagen: " + fsErr.message);
-                }
+                await addDoc(collection(db, "exams"), {
+                    subjectId: subjectId,
+                    fileName: file.name,
+                    url: uploaded.previewUrl,
+                    driveFileId: uploaded.fileId,
+                    visibility: "alle",
+                    allowedEmails: [],
+                    uploadedBy: auth.currentUser.uid,
+                    createdAt: serverTimestamp()
+                });
                 showStatus("✅ Erfolgreich hochgeladen!");
                 setTimeout(function () { showStatus(""); }, 3000);
             } catch (e) {
@@ -601,7 +613,7 @@
         }
         function onFileChosen(input) {
             const file = input.files && input.files[0];
-            input.value = ""; // dieselbe Datei kann danach erneut gewählt werden
+            input.value = "";
             handleUpload(file);
         }
         uploadInput.addEventListener("change", function () { onFileChosen(uploadInput); });
@@ -672,7 +684,6 @@
                 });
                 modalContainer.appendChild(row);
             });
-            // Speichern-Handler für diesen Vorgang setzen (ersetzt den vorherigen)
             const saveBtn = document.getElementById("save-access-btn");
             const newSave = saveBtn.cloneNode(true);
             saveBtn.parentNode.replaceChild(newSave, saveBtn);
